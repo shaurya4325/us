@@ -194,6 +194,11 @@ export class Engine implements EngineAPI {
     this.patch({}, { [`stats.pet_${id}`]: 1 });
   }
 
+  /* small read-only hooks (used by the local solo-test bot) */
+  sceneKind() { return this.cur.kind; }
+  myAnim() { return this.mine.anim as string; }
+  groundAt(x: number, z: number, y: number) { return this.cur.ground(x, z, y); }
+
   /* ---------- EngineAPI for scenes ---------- */
   now = () => Date.now();
   toolFor = (t?: ToolId) => !t || !!this.world.tools?.[t];

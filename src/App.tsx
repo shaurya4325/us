@@ -13,6 +13,7 @@ import { Capsule } from './ui/rooms/Capsule';
 import { Gate, Countdown } from './ui/Gate';
 import { Studio, UpdateModal } from './ui/Studio';
 import { music, unlockAudio } from './world/sound';
+import { SOLO, startSoloBot } from './dev/soloBot';
 
 const World = lazy(() => import('./ui/World').then((m) => ({ default: m.World })));
 
@@ -58,7 +59,8 @@ export default function App() {
 type Phase = 'gate' | 'countdown' | 'world';
 
 function Home({ onLeave }: { onLeave: () => void }) {
-  const { me, partner, states, tease, status, toast } = useVelvet();
+  const { me, partner, states, tease, status, toast, base } = useVelvet();
+  useEffect(() => (SOLO ? startSoloBot(base, partner) : undefined), [base, partner]);
   const [drawer, setDrawer] = useState<string | null>(null);
   const [settings, setSettings] = useState(false), [studio, setStudio] = useState(false);
   const [phase, setPhase] = useState<Phase>('gate');
