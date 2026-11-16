@@ -1,0 +1,9 @@
+    // us!! (C:\code-shaurya\us): each couple's room lives at us/{sha256(partner code)}.
+    // The 32-char room id is an unguessable hash of the Partner Code; rooms can't be listed.
+    match /us/{room} {
+      allow get: if room.size() == 32;
+      allow create, update: if room.size() == 32;
+      match /{sub=**} {
+        allow read, create, update, delete: if room.size() == 32;
+      }
+    }

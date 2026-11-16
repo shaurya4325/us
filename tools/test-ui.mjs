@@ -1,0 +1,28 @@
+// Drawers, Creator Studio → update modal, and the QR download page.  node tools/test-ui.mjs <outDir>
+import { launch, sleep } from './cdp.mjs';
+import fs from 'node:fs';
+const OUT = process.argv[2]; fs.mkdirSync(OUT, { recursive: true });
+const BASE = 'http://localhost:5199/';
+const b = await launch();
+const sess = (who) => `localStorage.setItem('us:session', JSON.stringify({ roomId: 'test0000000000000000000000000002', who: '${who}', deviceId: '${who}-dev' })); localStorage.setItem('vu:mute','1'); 1`;
+const S = await b.page(BASE + '?as=shaurya&awake'); await sleep(1500); await S.eval(sess('shaurya')); await S.send('Page.reload'); await sleep(3000);
+await S.eval(`document.querySelector('.dock button[title="Us Checkup & Open Heart"]').click(); 1`); await sleep(900);
+await S.shot(`${OUT}/u1-checkup-drawer.png`);
+await S.eval(`document.querySelector('.drawer-bg').click(); 1`); await sleep(600);
+await S.eval(`document.querySelector('.dock button[title="The Velvet Arcade"]').click(); 1`); await sleep(900);
+await S.shot(`${OUT}/u2-arcade-drawer.png`);
+await S.eval(`document.querySelector('.drawer-bg').click(); 1`); await sleep(600);
+await S.eval(`document.querySelector('.dock button[title="Creator Update Studio"]').click(); 1`); await sleep(700);
+const setVal = (sel, v) => `(()=>{const el=document.querySelector('${sel}'); const proto=Object.getPrototypeOf(el); Object.getOwnPropertyDescriptor(proto,'value').set.call(el, ${JSON.stringify(v)}); el.dispatchEvent(new Event('input',{bubbles:true})); return 1})()`;
+await S.eval(setVal('.sheet input[type=password]', '4325'));
+await S.eval(`[...document.querySelectorAll('.sheet button')].find(b=>b.textContent.includes('Unlock')).click(); 1`); await sleep(500);
+await S.eval(setVal('.sheet input[placeholder^="Update title"]', 'New scratch cards + the pool is open'));
+await S.eval(setVal('.sheet textarea[placeholder^="New "]', 'Dare: send me your best sleepy selfie\nCompliment: your laugh fixes my whole day'));
+await S.shot(`${OUT}/u3-studio.png`);
+await S.eval(`[...document.querySelectorAll('.sheet button')].find(b=>b.textContent.includes('Publish')).click(); 1`); await sleep(800);
+const A = await b.page(BASE + '?as=arushi&awake'); await sleep(4000);
+await A.shot(`${OUT}/u4-arushi-update-modal.png`);
+const D = await b.page(BASE + 'download.html'); await sleep(2500);
+await D.shot(`${OUT}/u5-download-qr.png`);
+for (const [n, p] of [['S', S], ['A', A], ['D', D]]) console.log(n, 'errors:', p.errors.slice(0, 6));
+b.close(); process.exit(0);

@@ -1,0 +1,93 @@
+name: Build us!! APK + QR download page
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: us-deploy
+  cancel-in-progress: true
+
+env:
+  APK_URL: https://github.com/${{ github.repository }}/releases/latest/download/us-app.apk
+  PAGES_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+
+jobs:
+  apk:
+    # Mood photos are not in this public repo, so a CI APK has no photos. Run it by hand (Actions → Run workflow);
+    # the main release APK (with photos) is built on Shaurya's PC and attached with `gh release create`.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      US_BUILD: ${{ github.run_number }}
+      VITE_BUILD: ${{ github.run_number }}
+      US_BUILD_TOOLS: 34.0.0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - uses: android-actions/setup-android@v3
+      - run: npm ci
+      - name: Photos check
+        run: '[ -d public/photos ] || echo "::warning::public/photos is not in the repo — this APK will use profile cutouts instead of mood photos."'
+      - name: Build web bundle (game + offline cutout model + soundtrack)
+        run: VITE_APK_URL="$APK_URL" npm run build
+      - name: Signing key (same key every release so updates install over the old app)
+        env: { KS: '${{ secrets.US_KEYSTORE_B64 }}' }
+        run: |
+          if [ -n "$KS" ]; then echo "$KS" | base64 -d > android/release.keystore
+          else
+            echo "::warning::US_KEYSTORE_B64 secret missing — using a throwaway key; this APK will not update over earlier installs."
+            keytool -genkeypair -keystore android/release.keystore -alias us -keyalg RSA -keysize 2048 -validity 12000 -storepass us-4325-love -keypass us-4325-love -dname "CN=us, O=us"
+          fi
+      - run: npx cap sync android
+      - name: Gradle assembleRelease
+        env: { US_KS_PASS: '${{ secrets.US_KS_PASS }}' }
+        run: |
+          [ -z "$US_KS_PASS" ] && unset US_KS_PASS
+          chmod +x android/gradlew && cd android && ./gradlew assembleRelease --no-daemon
+          cp app/build/outputs/apk/release/app-release.apk ../us-app.apk
+          ls -la ../us-app.apk
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: us!! build ${{ github.run_number }}
+          body: "Scan the QR on ${{ env.PAGES_URL }} or download us-app.apk below."
+          files: us-app.apk
+          make_latest: true
+      - name: QR code in the run summary
+        run: |
+          {
+            echo "## us!! build ${{ github.run_number }} — scan to install"
+            echo '```'
+            npx -y qrcode@1.5.4 -t utf8 "$APK_URL"
+            echo '```'
+            echo "APK: $APK_URL"
+            echo "QR page: $PAGES_URL"
+          } >> "$GITHUB_STEP_SUMMARY"
+          npx -y qrcode@1.5.4 -t utf8 "$APK_URL"
+
+  pages:
+    runs-on: ubuntu-latest
+    environment: { name: github-pages, url: '${{ steps.deployment.outputs.page_url }}' }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      - run: VITE_APK_URL="$APK_URL" npx vite build
+      - name: Only the QR download page goes public (no photos, models or audio)
+        run: |
+          mkdir site && cp dist/download.html site/index.html && cp -r dist/assets site/assets
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: site }
+      - id: deployment
+        uses: actions/deploy-pages@v4
