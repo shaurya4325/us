@@ -4,7 +4,7 @@ import { Kit, labelSprite, mat } from './gfx';
 import type { Look } from '../config/people';
 import type { ToolId } from './catalog';
 
-export type Anim = 'idle' | 'walk' | 'jump' | 'swing' | 'hug' | 'kiss' | 'dance' | 'pat' | 'hands' | 'sit' | 'swim' | 'wave' | 'cast';
+export type Anim = 'idle' | 'walk' | 'jump' | 'swing' | 'hug' | 'kiss' | 'dance' | 'pat' | 'patted' | 'whisper' | 'listen' | 'hands' | 'sit' | 'swim' | 'wave' | 'cast';
 
 const toolGeo = (id: ToolId | 'none') => {
   const k = new Kit();
@@ -24,7 +24,7 @@ export class Chibi {
   private cape = new THREE.Group(); private toolHold = new THREE.Group(); private capeMesh: THREE.Mesh;
   private toolMesh: THREE.Mesh | null = null; private tool: ToolId | 'none' = 'none';
   label: THREE.Sprite; private m = mat(); private t = 0; private swingT = 0;
-  anim: Anim = 'idle'; animT = 0; speed = 0;
+  anim: Anim = 'idle'; animT = 0; speed = 0; handSide: 'L' | 'R' = 'R';
 
   constructor(look: Look, name: string, color: string) {
     const L = look;
@@ -93,22 +93,26 @@ export class Chibi {
     this.t += dt; this.animT += dt;
     const t = this.t, a = this.anim, moving = this.speed > 0.2;
     const ph = t * (6 + this.speed * 1.6);
-    let bob = 0, legA = 0, armA = 0, armRA = 0, armLz = 0, armRz = 0, headTilt = 0, lean = 0, spin = 0, headYaw = 0;
+    let bob = 0, legA = 0, armA = 0, armRA = 0, armLz = 0, armRz = 0, headTilt = 0, lean = 0, spin = 0, headYaw = 0, headDown = 0, squish = 1, sway = 0;
     if (airborne) { legA = 0.5; armA = -2.4; }
     else if (a === 'swim') { bob = -0.35 + Math.sin(t * 3) * 0.05; armA = Math.sin(t * 5) * 1.6; legA = Math.sin(t * 6) * 0.5; }
     else if (moving || a === 'walk') { bob = Math.abs(Math.sin(ph)) * 0.07; legA = Math.sin(ph) * 0.75; armA = -Math.sin(ph) * 0.65; lean = 0.08; }
     else { bob = Math.sin(t * 2.2) * 0.012; armLz = 0.1; armRz = -0.1; }
     if (!moving && !airborne) {
-      if (a === 'hug') { armA = -1.3; armLz = 0.9; armRz = -0.9; lean = 0.18; headTilt = 0.15; }
-      if (a === 'kiss') { lean = 0.22; headTilt = 0.25 + Math.sin(t * 8) * 0.04; armA = -0.4; }
-      if (a === 'dance') { spin = this.animT * 6; bob = Math.abs(Math.sin(t * 8)) * 0.15; armLz = 2.4; armRz = -2.4; legA = Math.sin(t * 8) * 0.4; }
-      if (a === 'pat') { armRA = -2.8 + Math.sin(t * 12) * 0.25; armRz = 0.3; lean = 0.1; }
-      if (a === 'hands') { armRA = -0.6; armRz = -0.5; }
+      const k = Math.min(1, this.animT * 3);                                     // ease into every pose
+      if (a === 'hug') { armA = -1.55 * k; armLz = 1.15 * k; armRz = -1.15 * k; lean = 0.3 * k; headTilt = 0.25 * k; sway = Math.sin(t * 3) * 0.1 * k; bob = Math.abs(Math.sin(t * 3)) * 0.03; }
+      if (a === 'kiss') { lean = 0.36 * k; headTilt = 0.34 * k; bob = 0.07 * k; armA = -0.7 * k; armLz = 0.6 * k; armRz = -0.6 * k; legA = -0.15 * k; }
+      if (a === 'dance') { spin = this.animT * 7; bob = Math.abs(Math.sin(t * 8)) * 0.22; armLz = 2.5; armRz = -2.5; legA = Math.sin(t * 8) * 0.5; }
+      if (a === 'pat') { armRA = (-2.45 + Math.sin(t * 14) * 0.32) * k; armRz = 0.5 * k; lean = 0.2 * k; armLz = 0.2; }
+      if (a === 'patted') { headDown = (0.32 + Math.sin(t * 14) * 0.12) * k; squish = 1 - Math.abs(Math.sin(t * 14)) * 0.09 * k; bob = -0.04 * k; armLz = 0.35; armRz = -0.35; }
+      if (a === 'whisper') { lean = 0.3 * k; headTilt = -0.35 * k; armRA = -2.0 * k; armRz = 0.75 * k; }
+      if (a === 'listen') { headTilt = 0.35 * k; bob = Math.abs(Math.sin(t * 5)) * 0.03; armLz = 0.3; armRz = -0.3; }
+      if (a === 'hands') { if (this.handSide === 'R') { armRA = -0.35; armRz = 0.75; } else { armA = -0.35; armLz = -0.75; } }
       if (a === 'wave') { armRA = -2.6; armRz = -0.4 + Math.sin(t * 10) * 0.4; }
       if (a === 'sit') { legA = -1.4; bob = -0.18; }
       if (a === 'cast') { armRA = -1.2 + Math.sin(t * 2) * 0.1; }
     }
-    if (a === 'hands' && moving) armRA = -0.5;
+    if (a === 'hands' && moving) { if (this.handSide === 'R') { armRA = -0.3; armRz = 0.6; } else { armA = -0.3; armLz = -0.6; } }
     // tool swing overrides the right arm
     if (this.swingT > 0) {
       this.swingT -= dt;
@@ -116,9 +120,10 @@ export class Chibi {
       armRA = k < 0.35 ? -2.8 * (k / 0.35) : -2.8 + 3.4 * ((k - 0.35) / 0.65);
     }
     this.hips.position.y = bob;
-    this.hips.rotation.x = lean; this.hips.rotation.y = spin;
+    this.hips.rotation.x = lean; this.hips.rotation.y = spin; this.hips.rotation.z = sway;
+    this.head.scale.set(2 - squish, squish, 1);
     this.head.rotation.z = headTilt; this.head.rotation.y = headYaw;
-    this.head.rotation.x = -lean * 0.5 + Math.sin(t * 1.7) * 0.02;
+    this.head.rotation.x = -lean * 0.5 + headDown + Math.sin(t * 1.7) * 0.02;
     this.legL.rotation.x = legA; this.legR.rotation.x = a === 'sit' ? legA : -legA;
     this.armL.rotation.x = armA; this.armR.rotation.x = armRA || -armA;
     this.armL.rotation.z = armLz; this.armR.rotation.z = armRz;

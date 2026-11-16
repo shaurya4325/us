@@ -91,7 +91,7 @@ export function World({ openDrawer }: { openDrawer: (id: string) => void }) {
           )}
         </AnimatePresence>
       </div>
-      {SOLO && (
+      {SOLO && !hud?.moment && (
         <div className="hud where" style={{ left: '50%', transform: 'translateX(-50%)', top: 'calc(env(safe-area-inset-top) + 92px)', display: 'flex', gap: 8, alignItems: 'center', pointerEvents: 'auto' }}>
           🤖 Solo test · {PEOPLE[partner].name} is a bot
           <button className="pill" style={{ padding: '3px 8px', fontSize: 11 }} onClick={() => { patch(worldPath, { 'tools.hatchet': true, 'tools.pickaxe': true, 'tools.can': true, 'tools.net': true, 'tools.rod': true }, { 'inv.wood': 300, 'inv.stone': 300, 'inv.crystal': 60, 'inv.flower': 60, 'inv.fish': 20, 'inv.bug': 20 }); toast('🎁 Test kit added', 'All tools + plenty of materials'); }}>🎁 Test kit</button>

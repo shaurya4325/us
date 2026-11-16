@@ -148,3 +148,19 @@ canvas.scratch { border-radius: 0; }
 .pair { overflow-y: auto; touch-action: pan-y; padding: 12px; }
 .pair > .glass { margin: auto; padding: 16px 20px !important; gap: 9px; }
 .pair .brand { font-size: 32px !important; }
+
+/* ---- love-themed menu background (replaces dirt): plum-to-rose glow + pixel-heart tiles ---- */
+:root { --love-bg: url(./ui-tex/hearts.png) 0 0 / 48px 48px repeat,
+  radial-gradient(circle at 18% 12%, rgba(255, 125, 181, 0.45), transparent 42%),
+  radial-gradient(circle at 85% 88%, rgba(255, 62, 138, 0.38), transparent 48%),
+  radial-gradient(circle at 60% 40%, rgba(245, 163, 199, 0.18), transparent 55%),
+  linear-gradient(160deg, #5a1d45 0%, #3a1030 45%, #4d1640 100%); }
+body, .countdown, .rotate { background: var(--love-bg); background-color: #3a1030; }
+.gate { background: transparent; }
+.part { background: url(./ui-tex/hearts.png) 0 0 / 48px 48px, url(./ui-tex/rose.png) 0 0 / 48px 48px, #ec6296; }
+
+/* ---- couple moment caption ---- */
+.moment { position: absolute; left: 0; top: 0; padding: 8px 16px; white-space: nowrap; font: 700 22px var(--serif); letter-spacing: 0.05em; color: #fff;
+  background: url(./ui-tex/rose.png) 0 0 / 36px 36px, #ec6296; box-shadow: 0 0 0 3px var(--ink), var(--bevel), 0 8px 24px -6px #ff3e8a;
+  text-shadow: 2px 2px 0 var(--ink); animation: momentPop 0.45s cubic-bezier(.2, 1.6, .4, 1) both; }
+@keyframes momentPop { from { opacity: 0; scale: 0.4; } to { opacity: 1; scale: 1; } }

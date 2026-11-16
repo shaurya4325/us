@@ -14,7 +14,7 @@ import { sound } from './sound';
 export interface HudState {
   ctx: { label: string; icon: string; locked?: string } | null;
   love: number; near: boolean; scene: 'over' | 'inside'; holding: boolean;
-  partnerScene: 'over' | 'inside' | null; fps: number; calls: number; link: 'p2p' | 'cloud'; dpr: number; synergy: boolean;
+  partnerScene: 'over' | 'inside' | null; moment: boolean; fps: number; calls: number; link: 'p2p' | 'cloud'; dpr: number; synergy: boolean;
 }
 export interface EngineOpts {
   canvas: HTMLCanvasElement; overlay: HTMLElement; fade: HTMLElement;
@@ -45,6 +45,8 @@ export class Engine implements EngineAPI {
   private joy = new THREE.Vector2(); private keys = new Set<string>();
   private animUntil = 0; private animOverride: Anim | null = null;
   private pSnap: Snap | null = null; private pPos = new THREE.Vector3(); private pYaw = 0; private pSeen = 0; private pAirY = 0;
+  private moment: { kind: string; from: Who; until: number; mx: number; mz: number; my: number; tx: number; tz: number; yaw: number; ptx: number; ptz: number; pyaw: number; gap: number } | null = null;
+  private momentEl: HTMLDivElement | null = null; private momentHeartT = 0; private camD = 23;
   private love = 0; private holding: Who | null = null; private lastHarvest = 0; private pHarvest = 0;
   private timeScale = 1; private stopUntil = 0; private shakeA = 0;
   private camTarget = new THREE.Vector3(); private camOff = new THREE.Vector3(); private look = new THREE.Vector3();
@@ -68,6 +70,8 @@ export class Engine implements EngineAPI {
     window.addEventListener('keydown', this.kd); window.addEventListener('keyup', this.ku);
     this.mine = new Chibi(PEOPLE[this.me].look, PEOPLE[this.me].name, PEOPLE[this.me].aura);
     this.them = new Chibi(PEOPLE[this.partner].look, PEOPLE[this.partner].name, PEOPLE[this.partner].aura);
+    // Shaurya stands on the left and reaches with his left hand, Arushi on the right with her right
+    this.mine.handSide = this.me === 'shaurya' ? 'L' : 'R'; this.them.handSide = this.partner === 'shaurya' ? 'L' : 'R';
     this.tetherPos = new Float32Array(20 * 3);
     const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.BufferAttribute(this.tetherPos, 3));
     this.tether = new THREE.Line(tg, new THREE.LineBasicMaterial({ color: 0xffb3d4, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
@@ -161,17 +165,45 @@ export class Engine implements EngineAPI {
 
   couple(kind: string, text = '') {
     const t = Date.now();
-    if (kind === 'hands') { this.holding = this.holding ? null : this.me; this.net.act({ k: 'couple', t, d: { kind, on: !!this.holding } }); }
-    else if (kind === 'whisper') { this.net.act({ k: 'whisper', t, d: { text } }); this.bubble(this.me, text); return; }
+    if (kind === 'hands') { this.holding = this.holding ? null : this.me; this.net.act({ k: 'couple', t, d: { kind, on: !!this.holding } }); if (!this.holding) return; }
+    else if (kind === 'whisper') { this.net.act({ k: 'whisper', t, d: { text } }); this.bubble(this.me, text); this.startMoment('whisper', this.me); sound('pop'); return; }
     else this.net.act({ k: 'couple', t, d: { kind } });
     this.coupleFx(kind, this.me);
   }
+  /** both step together, face each other, the camera leans in, a caption pops and hearts stream */
+  private startMoment(kind: string, from: Who) {
+    const P = this.player;
+    const SPEC: Record<string, [number, number, string]> = {
+      hug: [0.8, 2.8, '🤗 Hug!'], kiss: [0.92, 2.6, '💋 Kiss!'], pat: [1.0, 2.6, '🫳 Head pat!'], dance: [1.4, 3.4, '💃 Dance together!'],
+      whisper: [0.88, 2.8, ''],                         // the speech bubble is the caption hands: [0.95, 2.0, '🤝 Holding hands'],
+    };
+    const [gap, secs, label] = SPEC[kind] ?? [0.6, 2.4, '💞'];
+    // stand side by side across the screen (Shaurya left, Arushi right on both phones), angled a little toward the camera
+    const tilt = 0, rx = Math.cos(YAW), rz = -Math.sin(YAW), fx = -Math.sin(YAW), fz = -Math.cos(YAW);
+    const ax = rx * Math.cos(tilt) + fx * Math.sin(tilt), az = rz * Math.cos(tilt) + fz * Math.sin(tilt);
+    const side = this.me === 'shaurya' ? 1 : -1;                     // +1: my partner is to my right
+    const dx = ax * side, dz = az * side;
+    const mx = (P.x + this.pPos.x) / 2, mz = (P.z + this.pPos.z) / 2;
+    // face each other, but cheated a third of the way toward the camera so both faces are visible (stage trick)
+    const yaw = kind === 'hands' ? YAW : angLerp(Math.atan2(dx, dz), YAW, 0.38);
+    const pyawFace = kind === 'hands' ? YAW : angLerp(Math.atan2(-dx, -dz), YAW, 0.38);
+    this.moment = { kind, from, until: performance.now() + secs * 1000, mx, mz, my: Math.max(P.y, this.pPos.y), gap,
+      tx: mx - (dx * gap) / 2, tz: mz - (dz * gap) / 2, yaw, ptx: mx + (dx * gap) / 2, ptz: mz + (dz * gap) / 2, pyaw: pyawFace };
+    this.vel.set(0, 0); this.animOverride = null;
+    this.momentEl?.remove();
+    this.momentEl = null;
+    if (label) { const el = document.createElement('div'); el.className = 'moment'; el.textContent = label; this.o.overlay.appendChild(el); this.momentEl = el; }
+  }
+  /** where the partner should stand during a moment (used by the local solo-test bot) */
+  momentForPartner() {
+    const m = this.moment;
+    if (!m || m.gap === 0 || performance.now() > m.until) return null;
+    const mine = m.from === this.me;
+    const anim = ({ hug: 'hug', kiss: 'kiss', pat: mine ? 'patted' : 'pat', dance: 'dance', whisper: mine ? 'listen' : 'whisper' } as Record<string, string>)[m.kind] ?? 'idle';
+    return { x: m.ptx, z: m.ptz, yaw: m.pyaw, anim: m.kind === 'hands' ? 'hands' : anim };
+  }
   private coupleFx(kind: string, from: Who) {
-    const anim: Record<string, Anim> = { kiss: 'kiss', hug: 'hug', dance: 'dance', pat: from === this.me ? 'pat' : 'idle', hands: 'hands' };
-    const secs = kind === 'dance' ? 3 : kind === 'hands' ? 0 : 2.2;
-    if (secs) this.play(anim[kind] ?? 'idle', secs);
-    // face each other
-    if (kind !== 'dance') this.yaw = Math.atan2(this.pPos.x - this.player.x, this.pPos.z - this.player.z);
+    if (kind !== 'hands' || this.holding) this.startMoment(kind, from);
     const mx = (this.player.x + this.pPos.x) / 2, mz = (this.player.z + this.pPos.z) / 2, my = Math.max(this.player.y, this.pPos.y) + 1.6;
     this.hearts.burst(mx, my, mz, kind === 'kiss' ? 22 : 14, kind === 'kiss' ? 0xff3e8a : 0xffb3d4, 1.2, 1.6, 0.5, 1.6, false);
     sound(kind === 'kiss' ? 'kiss' : kind === 'hug' ? 'hug' : 'shimmer');
@@ -182,7 +214,7 @@ export class Engine implements EngineAPI {
       if (a.d.kind === 'hands') this.holding = a.d.on ? this.partner : null;
       this.coupleFx(a.d.kind, this.partner);
     }
-    if (a.k === 'whisper') { this.bubble(this.partner, a.d.text); sound('pop'); }
+    if (a.k === 'whisper') { this.bubble(this.partner, a.d.text); this.startMoment('whisper', this.partner); sound('pop'); }
     if (a.k === 'harvest') this.pHarvest = Date.now();
     if (a.k === 'petted') { const p = this.pets.find((x) => x.id === a.d.id); if (p) { p.hop = 0.6; this.hearts.burst(p.x, p.y + 0.8, p.z, 6, 0xff9ec4, 0.6, 1, 0.35, 1.2, false); } }
   }
@@ -269,13 +301,16 @@ export class Engine implements EngineAPI {
   private step(dt: number, now: number) {
     const P = this.player, S = this.cur;
     // --- camera-relative joystick: moveDir = normalize(camRight * joyX + camForward * (-joyY))
-    let jx = this.joy.x, jy = this.joy.y;
-    if (this.keys.size) { jx += (this.keys.has('d') || this.keys.has('arrowright') ? 1 : 0) - (this.keys.has('a') || this.keys.has('arrowleft') ? 1 : 0); jy += (this.keys.has('s') || this.keys.has('arrowdown') ? 1 : 0) - (this.keys.has('w') || this.keys.has('arrowup') ? 1 : 0); }
+    let mo = this.moment && performance.now() < this.moment.until ? this.moment : null;
+    if (!mo && this.moment) { this.moment = null; this.momentEl?.remove(); this.momentEl = null; }
+    if (mo && this.pSnap?.s !== S.kind) { this.moment = null; this.momentEl?.remove(); this.momentEl = null; mo = null; }
+    let jx = mo ? 0 : this.joy.x, jy = mo ? 0 : this.joy.y;
+    if (this.keys.size && !mo) { jx += (this.keys.has('d') || this.keys.has('arrowright') ? 1 : 0) - (this.keys.has('a') || this.keys.has('arrowleft') ? 1 : 0); jy += (this.keys.has('s') || this.keys.has('arrowdown') ? 1 : 0) - (this.keys.has('w') || this.keys.has('arrowup') ? 1 : 0); }
     const fwdX = -Math.sin(YAW), fwdZ = -Math.cos(YAW), rgtX = Math.cos(YAW), rgtZ = -Math.sin(YAW);
     let mx = rgtX * jx + fwdX * -jy, mz = rgtZ * jx + fwdZ * -jy;
     const mag = Math.min(1, Math.hypot(jx, jy));
     // holding hands: the follower drifts to the leader's side while idle
-    if (this.holding === this.partner && mag < 0.05 && this.pSnap?.s === S.kind) {
+    if (!mo && this.holding === this.partner && mag < 0.05 && this.pSnap?.s === S.kind) {
       const tx = this.pPos.x + Math.cos(this.pYaw) * 0.75, tz = this.pPos.z - Math.sin(this.pYaw) * 0.75, d = Math.hypot(tx - P.x, tz - P.z);
       if (d > 0.25) { mx = (tx - P.x) / d; mz = (tz - P.z) / d; }
     }
@@ -299,12 +334,19 @@ export class Engine implements EngineAPI {
     if (P.y <= g) { if (!this.grounded && this.vy < -4) { sound('land'); this.sparks.burst(P.x, g + 0.05, P.z, 6, 0xffffff, 0.8, 0.6, 0.25, 0.4); } P.y = g; this.vy = 0; this.grounded = true; }
     else if (P.y - g > 0.08) this.grounded = false;
     if (this.grounded && P.y - g < 0.5) P.y = g;
-    const spd = Math.hypot(this.vel.x, this.vel.y);
+    if (mo && mo.gap) {
+      const k = 1 - Math.exp(-9 * dt), nx = P.x + (mo.tx - P.x) * k, nz = P.z + (mo.tz - P.z) * k;
+      if (S.ground(nx, nz, P.y + 0.5) !== null) { P.x = nx; P.z = nz; }
+      if (mo.kind !== 'dance') this.yaw = angLerp(this.yaw, mo.yaw, k);
+    }
+    const spd = mo ? 0 : Math.hypot(this.vel.x, this.vel.y);
     if (spd > 0.3) this.yaw = angLerp(this.yaw, Math.atan2(this.vel.x, this.vel.y), 1 - Math.exp(-12 * dt));
     // my chibi
     const over = this.animOverride && now < this.animUntil ? this.animOverride : null;
     if (over && spd > 0.8 && over !== 'hands') this.animOverride = null;
-    const anim: Anim = swimming ? 'swim' : over ?? (this.holding ? 'hands' : spd > 0.3 ? 'walk' : 'idle');
+    const mine = mo ? mo.from === this.me : false;
+    const moAnim: Anim | null = mo ? (({ hug: 'hug', kiss: 'kiss', pat: mine ? 'pat' : 'patted', dance: 'dance', whisper: mine ? 'whisper' : 'listen', hands: 'hands' } as Record<string, Anim>)[mo.kind] ?? null) : null;
+    const anim: Anim = swimming ? 'swim' : moAnim ?? over ?? (this.holding ? 'hands' : spd > 0.3 ? 'walk' : 'idle');
     this.mine.play(anim); this.mine.speed = spd;
     this.mine.root.position.set(P.x, P.y, P.z); this.mine.root.rotation.y = this.yaw;
     this.mine.update(dt, !this.grounded);
@@ -362,8 +404,18 @@ export class Engine implements EngineAPI {
     S.update(dt, this.t, this);
     this.sparks.update(dt); this.hearts.update(dt);
     // camera: exponential spring follow with look-ahead, fixed 45° yaw / 42° pitch
-    const D = S.kind === 'over' ? 23 : 21;
-    this.look.set(P.x + this.vel.x * 0.35, P.y + 0.6, P.z + this.vel.y * 0.35);
+    this.camD += ((mo ? 11.5 : S.kind === 'over' ? 23 : 21) - this.camD) * (1 - Math.exp(-(mo ? 5 : 2.5) * dt));
+    const D = this.camD;
+    if (mo) this.look.set(mo.mx, mo.my + 1.3, mo.mz);
+    else this.look.set(P.x + this.vel.x * 0.35, P.y + 0.6, P.z + this.vel.y * 0.35);
+    if (mo && (this.momentHeartT -= dt) <= 0) {
+      this.momentHeartT = mo.kind === 'kiss' ? 0.16 : 0.26;
+      this.hearts.burst(mo.mx, mo.my + 1.45, mo.mz, mo.kind === 'kiss' ? 4 : 3, mo.kind === 'kiss' ? 0xff3e8a : 0xff9ec4, 0.7, 1.4, 0.6, 1.5, false);
+    }
+    if (mo && this.momentEl) {
+      const [sx, sy] = this.project(mo.mx, mo.my + 2.25, mo.mz);
+      this.momentEl.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -100%)`;
+    }
     this.camTarget.lerp(this.look, 1 - Math.exp(-8 * dt));
     this.camOff.set(Math.sin(YAW) * Math.cos(PITCH) * D, Math.sin(PITCH) * D, Math.cos(YAW) * Math.cos(PITCH) * D);
     this.camera.position.copy(this.camTarget).add(this.camOff);
@@ -435,7 +487,7 @@ export class Engine implements EngineAPI {
       ctx: c ? { label: c.label, icon: c.icon, locked: c.needs && !this.toolFor(c.needs) ? TOOLS[c.needs].icon : undefined } : null,
       love: Math.round(this.love * 100) / 100, near: this.them.root.visible && Math.hypot(this.pPos.x - this.player.x, this.pPos.z - this.player.z) < 2.8,
       scene: this.cur.kind, holding: !!this.holding, partnerScene, fps: this.fps, calls: this.renderer.info.render.calls, link: this.net.mode, dpr: this.dpr,
-      synergy: this.synergy() > 1,
+      synergy: this.synergy() > 1, moment: !!this.moment,
     };
     const key = JSON.stringify(h);
     if (key !== this.lastHud) { this.lastHud = key; this.o.onHud(h); }

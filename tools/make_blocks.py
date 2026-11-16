@@ -62,3 +62,14 @@ for y in range(16):
         px.append(c + (255,))
 save('slot', px)
 print('blocks ok')
+
+# hearts: transparent tile with two soft pixel hearts (checker offset) for the love-themed menu background
+HEART = ["0110110", "1111111", "1111111", "0111110", "0011100", "0001000"]
+px = [(0, 0, 0, 0)] * 256
+def heart(ox, oy, col):
+    for y, row in enumerate(HEART):
+        for x, c in enumerate(row):
+            if c == '1': px[(oy + y) * 16 + ox + x] = col
+heart(1, 1, (255, 150, 200, 70)); heart(9, 9, (255, 110, 170, 45))
+save('hearts', px)
+print('hearts ok')
