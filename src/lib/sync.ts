@@ -36,13 +36,19 @@ const db = FB ? getFirestore(initializeApp(FB)) : null;
 /* ---------------- local demo backend ---------------- */
 const subs = new Map<string, Set<() => void>>();
 const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('us-app') : null;
-const ping = (key: string, fromRemote = false) => {
+// Chrome copies localStorage between windows lazily, so a window told "key changed" could re-read a stale copy.
+// The new value therefore travels inside the message and is kept in `mem`, which reads prefer.
+const mem = new Map<string, any>();
+const ping = (key: string, v: any, fromRemote = false) => {
   subs.get(key)?.forEach((f) => f());
-  if (!fromRemote) bc?.postMessage(key);
+  if (!fromRemote) bc?.postMessage({ k: key, v });
 };
-bc && (bc.onmessage = (e) => ping(e.data, true));
-const lsGet = (k: string, d: any) => { try { return JSON.parse(localStorage.getItem('us:' + k) ?? 'null') ?? d; } catch { return d; } };
-const lsSet = (k: string, v: any) => { try { localStorage.setItem('us:' + k, JSON.stringify(v)); } catch (e) { console.warn(e); } ping(k); };
+bc && (bc.onmessage = (e) => { const { k, v } = e.data ?? {}; if (typeof k !== 'string') return; mem.set(k, v); ping(k, v, true); });
+const lsGet = (k: string, d: any) => {
+  if (mem.has(k)) return mem.get(k) ?? d;
+  try { return JSON.parse(localStorage.getItem('us:' + k) ?? 'null') ?? d; } catch { return d; }
+};
+const lsSet = (k: string, v: any) => { mem.set(k, v); try { localStorage.setItem('us:' + k, JSON.stringify(v)); } catch (e) { console.warn(e); } ping(k, v); };
 const sub = (k: string, f: () => void): Unsub => {
   if (!subs.has(k)) subs.set(k, new Set());
   subs.get(k)!.add(f); f();
@@ -70,8 +76,9 @@ export async function setDoc(path: string, data: Doc, merge = true) {
 }
 export async function removeDoc(path: string) {
   if (db) return deleteDoc(doc(db, path)).catch(fail);
+  mem.set('d:' + path, null);
   try { localStorage.removeItem('us:d:' + path); } catch { /* ignore */ }
-  ping('d:' + path);
+  ping('d:' + path, null);
 }
 export async function addTo(col: string, data: Doc): Promise<string> {
   if (db) return addDoc(collection(db, col), data).then((r) => r.id).catch((e) => (fail(e), ''));

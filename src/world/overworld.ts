@@ -49,7 +49,7 @@ export class Overworld implements SceneAPI {
   private cableLines: THREE.LineSegments | null = null; private packets!: THREE.InstancedMesh; private cableIds: string[] = [];
   private world: WorldDoc = {};
   private m4 = new THREE.Matrix4(); private q = new THREE.Quaternion(); private v = new THREE.Vector3(); private s3 = new THREE.Vector3(); private e = new THREE.Euler();
-  private lastIncome = 0; private sniffs: { x: number; z: number; until: number }[] = [];
+  private lastIncome = 0; private refT = 0; private sniffs: { x: number; z: number; until: number }[] = [];
 
   constructor() {
     const S = this.scene;
@@ -484,7 +484,7 @@ export class Overworld implements SceneAPI {
     // hit wobble
     let wob = false;
     for (const n of this.nodes) if (n.wob > 0) { n.wob = Math.max(0, n.wob - dt); wob = true; }
-    if (wob || Math.floor(t) % 5 === 0) this.refreshNodes();
+    if (wob || (this.refT += dt) > 2) { this.refT = 0; this.refreshNodes(); }
     if (this.door) (this.door.material as THREE.MeshBasicMaterial).opacity = 0.35 + Math.sin(t * 3) * 0.2;
     // Sky-Cable packets glide to the hopper; Shaurya's phone is the single source of truth for income
     let pi = 0;

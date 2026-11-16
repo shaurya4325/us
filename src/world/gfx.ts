@@ -177,15 +177,18 @@ export class Particles {
 /** rounded-rect label texture for name plates, signs and room labels */
 export function labelSprite(text: string, color = '#FF3E8A', scale = 1, heart = true) {
   const [c, g] = canvas(512, 128);
-  g.font = '700 54px Manrope, system-ui, sans-serif';
+  g.font = '700 50px "Pixelify Sans", monospace';
   const label = heart ? `♥ ${text}` : text;
-  const w = Math.min(500, g.measureText(label).width + 56);
-  g.fillStyle = 'rgba(23,9,18,0.72)';
-  g.beginPath(); g.roundRect((512 - w) / 2, 22, w, 84, 42); g.fill();
-  g.strokeStyle = color; g.lineWidth = 4; g.stroke();
-  g.fillStyle = '#FFF1F6'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(label, 256, 66);
-  if (heart) { g.fillStyle = color; g.fillText('♥', 256 - g.measureText(label).width / 2 + 16, 66); }
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const w = Math.min(500, g.measureText(label).width + 48), x0 = Math.round((512 - w) / 2);
+  g.fillStyle = '#1a1018'; g.fillRect(x0 - 6, 22, w + 12, 84);                 // black pixel edge
+  g.fillStyle = 'rgba(52,40,58,0.92)'; g.fillRect(x0, 28, w, 72);
+  g.fillStyle = 'rgba(255,255,255,0.22)'; g.fillRect(x0, 28, w, 6); g.fillRect(x0, 28, 6, 72);   // bevel
+  g.fillStyle = 'rgba(0,0,0,0.4)'; g.fillRect(x0, 94, w, 6); g.fillRect(x0 + w - 6, 28, 6, 72);
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = '#1a1018'; g.fillText(label, 260, 68);
+  g.fillStyle = '#FFF6EC'; g.fillText(label, 256, 64);
+  if (heart) { g.fillStyle = color; g.fillText('♥', 256 - g.measureText(label).width / 2 + 14, 64); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.generateMipmaps = false;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true }));
   s.scale.set(2 * scale, 0.5 * scale, 1); s.renderOrder = 10;
   return s;

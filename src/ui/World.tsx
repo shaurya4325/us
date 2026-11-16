@@ -24,7 +24,11 @@ export function World({ openDrawer }: { openDrawer: (id: string) => void }) {
   const wRef = useRef(w); wRef.current = w;
 
   useEffect(() => {
-    const e = new Engine({
+    let dead = false, e: Engine | null = null;
+    // 3D name plates are drawn with the pixel font, so wait for it (max 1.5s)
+    Promise.race([document.fonts.load('700 50px "Pixelify Sans"'), new Promise((r) => setTimeout(r, 1500))]).then(() => {
+    if (dead) return;
+    e = new Engine({
       canvas: canvas.current!, overlay: overlay.current!, fade: fade.current!, me, base, world: wRef.current,
       patch: (f, i) => patch(worldPath, f, i),
       onHud: setHud,
@@ -38,7 +42,8 @@ export function World({ openDrawer }: { openDrawer: (id: string) => void }) {
     });
     eng.current = e;
     if (import.meta.env.DEV) Object.assign(window, { __us: e, __usPatch: (f: any, i: any) => patch(worldPath, f, i) });
-    return () => { e.dispose(); eng.current = null; };
+    });
+    return () => { dead = true; e?.dispose(); eng.current = null; };
   }, [base, me]); // eslint-disable-line
   useEffect(() => { eng.current?.setWorld(w); }, [world]); // eslint-disable-line
 
@@ -69,18 +74,20 @@ export function World({ openDrawer }: { openDrawer: (id: string) => void }) {
           <div className="lovebar"><i style={{ width: `${love * 100}%` }} /></div>
           <span className="small" style={{ fontWeight: 800, color: full ? 'var(--blush)' : 'var(--muted)' }}>{full ? 'Full Love' : 'Love'}</span>
         </div>
+        {hud && hud.partnerScene && hud.partnerScene !== hud.scene && <div className="where">{PEOPLE[partner].name} is {hud.partnerScene === 'inside' ? 'inside our house 🏡' : 'out in the meadow 🌿'}</div>}
+        {hud?.synergy && <div className="where" style={{ color: 'var(--gold)' }}>✦ Partner Synergy Cable · 2× harvest</div>}
+        {hud && <div className="debug">{hud.fps} fps · {hud.calls} draws · {hud.link === 'p2p' ? 'direct link' : 'cloud link'} · {hud.dpr}x</div>}
+      </div>
+      <div className="hud couplebar">
         <AnimatePresence>
           {full && (
-            <motion.div className="couple" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={spring}>
+            <motion.div className="couple" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={spring}>
               {[['kiss', '💋 Kiss'], ['hug', '🤗 Hug'], ['hands', hud?.holding ? '🤝 Let go' : '🤝 Hold Hands'], ['dance', '💃 Dance'], ['pat', '🫳 Head Pat'], ['whisper', '🤫 Whisper']].map(([k, l]) => (
                 <button key={k} className={k === 'hands' && hud?.holding ? 'on' : ''} onClick={() => { eng.current?.couple(k, k === 'whisper' ? WHISPERS[Math.floor(Math.random() * WHISPERS.length)] : ''); }}>{l}</button>
               ))}
             </motion.div>
           )}
         </AnimatePresence>
-        {hud && hud.partnerScene && hud.partnerScene !== hud.scene && <div className="where">{PEOPLE[partner].name} is {hud.partnerScene === 'inside' ? 'inside our house 🏡' : 'out in the meadow 🌿'}</div>}
-        {hud?.synergy && <div className="where" style={{ color: 'var(--gold)' }}>✦ Partner Synergy Cable · 2× harvest</div>}
-        {hud && <div className="debug">{hud.fps} fps · {hud.calls} draws · {hud.link === 'p2p' ? 'direct link' : 'cloud link'} · {hud.dpr}x</div>}
       </div>
       <Badge who="shaurya" side="left" energy={states.shaurya.energy} />
       <Badge who="arushi" side="right" energy={states.arushi.energy} />
@@ -100,8 +107,8 @@ function Badge({ who, side, energy }: { who: Who; side: 'left' | 'right'; energy
   const src = useMemo(() => portrait(who), [who]);
   const e = Math.max(0.05, Math.min(1, (energy ?? 70) / 100)), C = 2 * Math.PI * 28;
   return (
-    <div className="hud badge" style={side === 'left' ? { left: 'calc(env(safe-area-inset-left) + 14px)', top: '42%' } : { right: 'calc(var(--rail) + 12px)', top: '38%' }}>
-      <div className="ring">
+    <div className="hud badge" style={side === 'left' ? { left: 'calc(env(safe-area-inset-left) + 14px)', top: '31%' } : { right: 'calc(var(--rail) + 12px)', top: '38%' }}>
+      <div className="ring" style={{ ['--e' as any]: `${Math.round(e * 100)}%` }}>
         {src && <img src={src} alt="" />}
         <svg width="62" height="62"><circle cx="31" cy="31" r="28" fill="none" stroke="rgba(255,255,255,.15)" strokeWidth="4" />
           <circle cx="31" cy="31" r="28" fill="none" stroke={PEOPLE[who].aura} strokeWidth="4" strokeLinecap="round" strokeDasharray={`${C * e} ${C}`} /></svg>

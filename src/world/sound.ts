@@ -76,4 +76,10 @@ export function music(t: Track | null) {
   a.play().then(() => { let v = 0; const iv = setInterval(() => { v += 0.03; if (v >= 0.45 || el !== a) { clearInterval(iv); } else a.volume = v; }, 80); }).catch(() => { /* waits for a tap */ });
 }
 export const currentTrack = () => curTrack;
+/** call after the mute setting changes */
+export function syncMute() {
+  if (isMuted()) { el?.pause(); return; }
+  if (el) { el.play().catch(() => {}); return; }
+  if (curTrack) { const t = curTrack; curTrack = null; music(t); }
+}
 export function unlockAudio() { try { ac(); if (el?.paused && !isMuted()) el.play().catch(() => {}); } catch { /* */ } }

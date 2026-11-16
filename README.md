@@ -8,10 +8,22 @@ A 2.5D isometric co-op world for Shaurya and Arushi. The 3D world opens **only w
 npm install
 npx vite --mode demo --port 5199     # demo mode: no Firebase, data stays in this browser
 # open  http://localhost:5199/?awake   and   http://localhost:5199/?as=shaurya&awake   in two windows
-node tools/test-coop.mjs out/         # headless two-phone test: gate → countdown → world → build → interior → disconnect
+node tools/test-all.mjs out/          # full sweep (51 checks): gathering, crafting, all panels, 10 rooms, every
+                                      # interior object, couple actions, drawers, mood/poke sync, disconnect
+node tools/test-coop.mjs out/         # shorter two-phone run: gate → countdown → world → build → interior → disconnect
 node tools/test-ui.mjs out/           # drawers, Creator Studio → update modal, QR page
 node tools/test-cutout.mjs            # checks the bundled background-removal model runs with no CDN requests
 ```
+
+## Passcode
+
+There is one shared passcode, and you both enter it with your name. It never appears in the app or this repo:
+
+- The app hashes the passcode into a room id.
+- Only rooms that exist in Firestore are accepted, so every other passcode is refused.
+- Register your passcode's room once with `node tools/create-room.mjs <passcode>`. Run it again if you ever change the passcode.
+- Each name is held by one phone. **Settings → Unpair** frees it. A name also frees itself after its phone has been away for 10 minutes, for example after a reinstall.
+- Demo mode (no Firebase) accepts the first code typed, because the world is local only.
 
 ## Build the APK locally (no Android Studio)
 
@@ -34,6 +46,7 @@ The build uses the Android SDK that ships with Unity (`android/local.properties`
 | Interior: room layouts, hallways, stairs | `src/world/interior.ts` (`LAYOUT`) |
 | Engine: camera, joystick, physics, love meter, fade, adaptive DPR | `src/world/engine.ts` |
 | Live link (WebRTC peer-to-peer, Firestore fallback) | `src/world/net.ts` |
+| Blocky pixel theme (fonts, textures, panels) | `src/theme-block.css`, textures from `tools/make_blocks.py` |
 | Character looks | `src/config/people.ts` and `src/world/chibi.ts` |
 | Card text for all games (keep it sweet) | `src/config/content.ts` |
 | Mood photos | `public/photos/<who>/<who>-<mood>-N.webp` and `src/config/moodPhotos.ts` |

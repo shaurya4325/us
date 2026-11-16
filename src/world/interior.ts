@@ -54,7 +54,7 @@ const LAYOUT: Record<RoomType, (k: Kit, g: Kit) => Built> = {
     return { spots: [{ key: 'swim', x: 1.0, z: -2.3, label: 'Swim together', icon: '🏊' }, { key: 'jacuzzi', x: -3.2, z: 1.6, label: 'Relax in the jacuzzi', icon: '♨️' }],
       cols: [[-3.2, 3.0, 1.1], [3.7, -3.6, 0.6], [2.4, -3.6, 0.6]], pool: [-1.4, -1.5, 3.4, 2.5],
       extras: (gr, ox, oy, oz, u) => {
-        const w = new THREE.Mesh(new THREE.PlaneGeometry(4.8, 4.0), waterMaterial(u)); w.rotation.x = -Math.PI / 2; w.position.set(ox + 1.0, oy - 0.1, oz + 0.5); gr.add(w);
+        const w = new THREE.Mesh(new THREE.PlaneGeometry(4.8, 4.0), waterMaterial(u)); w.rotation.x = -Math.PI / 2; w.position.set(ox + 1.0, oy + 0.04, oz + 0.5); gr.add(w);
         const j = new THREE.Mesh(new THREE.CircleGeometry(0.85, 16), waterMaterial(u, '#5fd0d6', '#d6fbff')); j.rotation.x = -Math.PI / 2; j.position.set(ox - 3.2, oy + 0.52, oz + 3.0); gr.add(j);
       } };
   },

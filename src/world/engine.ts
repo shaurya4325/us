@@ -51,7 +51,7 @@ export class Engine implements EngineAPI {
   private v1 = new THREE.Vector3(); private v2 = new THREE.Vector3();
   private t = 0; private last = performance.now(); private raf = 0; private alive = true; private fading = false;
   private fpsT = 0; private frames = 0; private fps = 60; private dpr: number; private maxDpr: number; private goodFor = 0;
-  private hudT = 0; private lastHud = ''; private sendT = 0; private stepT = 0; private heartT = 0; private sniffT = 0;
+  private hudT = 0; private ctxT = 0; private lastHud = ''; private sendT = 0; private stepT = 0; private heartT = 0; private sniffT = 0;
   private ctx: Interactable | null = null; private bubbles: { el: HTMLDivElement; who: Who; until: number }[] = [];
   private pops: { el: HTMLDivElement; x: number; y: number; z: number; t: number }[] = [];
 
@@ -90,7 +90,8 @@ export class Engine implements EngineAPI {
     this.player.x = x; this.player.y = y; this.player.z = z; this.vy = 0; this.yaw = 0;
     if (this.pSnap && this.pSnap.s === s.kind) this.pPos.set(...this.pSnap.p);
     else { const [px, py, pz] = s.spawn(this.partner); this.pPos.set(px, py, pz); }
-    this.pets.forEach((p) => { p.x = x + (Math.random() - 0.5) * 2; p.z = z + 1; p.y = y; });
+    this.pets.forEach((p) => { p.x = x + (Math.random() - 0.5) * 2; p.z = z + 1; p.y = y; p.target = null; });
+    this.ctx = null; this.ctxT = 0;
     this.camTarget.set(x, y, z);
   }
   private swap(make: () => SceneAPI) {
@@ -350,17 +351,8 @@ export class Engine implements EngineAPI {
     if (sameScene) this.shadows.put(this.pPos.x, S.ground(this.pPos.x, this.pPos.z, this.pPos.y + 0.1) ?? this.pPos.y, this.pPos.z, 0.9);
     for (const p of this.pets) if (p.mesh.visible) this.shadows.put(p.x, p.y, p.z, 0.6);
     this.shadows.end();
-    // context action: nearest interactable in reach
-    let best: Interactable | null = null, bd = 1e9;
-    const list = S.interactables(P.x, P.z);
-    for (const p of this.pets) if (p.mesh.visible) list.push({ id: 'pet:' + p.id, x: p.x, z: p.z, r: 1.3, label: `Pet ${PETS[p.id].name}`, icon: PETS[p.id].icon });
-    for (const it of list) {
-      if (it.y !== undefined && Math.abs(it.y - P.y) > 1.6) continue;
-      const d = Math.hypot(it.x - P.x, it.z - P.z);
-      if (d < it.r && d < bd) { bd = d; best = it; }
-    }
-    if (!best && S instanceof Overworld && this.toolFor('can') && S.plantAt(P.x, P.z + 0.8)) best = { id: 'plant', x: P.x, z: P.z, r: 1, label: 'Plant sapling (1🌼)', icon: '🌱', tool: 'can' };
-    this.ctx = best;
+    // context action: nearest interactable in reach (10x per second is plenty, and keeps garbage low)
+    if ((this.ctxT -= dt) <= 0) { this.ctxT = 0.1; this.pickCtx(); }
     // scene + particles
     S.update(dt, this.t, this);
     this.sparks.update(dt); this.hearts.update(dt);
@@ -387,6 +379,20 @@ export class Engine implements EngineAPI {
       p.el.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -50%) scale(${1 + Math.min(p.t * 4, 0.3)})`; p.el.style.opacity = String(1 - Math.max(0, p.t - 0.8) * 2);
       return true;
     });
+  }
+
+  private pickCtx() {
+    const P = this.player, S = this.cur;
+    let best: Interactable | null = null, bd = 1e9;
+    const list = S.interactables(P.x, P.z);
+    for (const p of this.pets) if (p.mesh.visible) list.push({ id: 'pet:' + p.id, x: p.x, z: p.z, r: 1.3, label: `Pet ${PETS[p.id].name}`, icon: PETS[p.id].icon });
+    for (const it of list) {
+      if (it.y !== undefined && Math.abs(it.y - P.y) > 1.6) continue;
+      const d = Math.hypot(it.x - P.x, it.z - P.z);
+      if (d < it.r && d < bd) { bd = d; best = it; }
+    }
+    if (!best && S instanceof Overworld && this.toolFor('can') && S.plantAt(P.x, P.z + 0.8)) best = { id: 'plant', x: P.x, z: P.z, r: 1, label: 'Plant sapling (1🌼)', icon: '🌱', tool: 'can' };
+    this.ctx = best;
   }
 
   private stepPets(dt: number, partnerHere: boolean) {

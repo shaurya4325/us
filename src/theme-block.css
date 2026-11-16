@@ -1,0 +1,150 @@
+/* ================= us!! — blocky pixel-game theme =================
+   Loaded after styles.css. Square bevelled panels, pixel fonts, 16px textures scaled 3x with nearest-neighbour.
+   Textures are original (tools/make_blocks.py). */
+:root {
+  --sans: 'Pixelify Sans', 'Courier New', monospace;
+  --serif: 'Silkscreen', 'Pixelify Sans', monospace;
+  --r: 0px;
+  --ink: #1a1018;
+  --line: #1a1018;
+  --cream: #fff6ec; --muted: rgba(255, 246, 236, 0.72);
+  --bevel: inset 3px 3px 0 rgba(255, 255, 255, 0.28), inset -3px -3px 0 rgba(0, 0, 0, 0.42);
+  --bevel-in: inset -3px -3px 0 rgba(255, 255, 255, 0.18), inset 3px 3px 0 rgba(0, 0, 0, 0.5);
+  --edge: 0 0 0 3px var(--ink);
+  --tx: 48px; /* 16px texture shown at 3x */
+}
+html, body { image-rendering: pixelated; }
+body {
+  font: 15px/1.35 var(--sans); letter-spacing: 0.02em;
+  background: url(./ui-tex/dirt.png) 0 0 / var(--tx) var(--tx) repeat, #5a3f2b;
+  -webkit-font-smoothing: none;
+}
+h1, h2, h3 { font-family: var(--serif); font-weight: 700; letter-spacing: 0.04em; text-shadow: 2px 2px 0 var(--ink); }
+h2 { font-size: 19px; } h3 { font-size: 14px; }
+.small { font-size: 13px; }
+
+/* text: hard pixel drop shadow everywhere it sits on textures */
+.btn, .pill, .chip, .dock button, .tab, .opt, .couple button, .where, .badge span, .debug, .toast b, .rail .who { text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55); }
+
+.brand {
+  font-family: var(--serif); font-style: normal; font-weight: 700; letter-spacing: 0.06em;
+  color: #ffd1e3; background: none; -webkit-background-clip: initial; background-clip: initial;
+  text-shadow: 3px 3px 0 #b8336f, 6px 6px 0 var(--ink);
+}
+
+/* panels: dark slate blocks with a bevel and a black pixel edge */
+.glass {
+  background: url(./ui-tex/slate.png) 0 0 / var(--tx) var(--tx) repeat, #34283a;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  border: 0; border-radius: 0; box-shadow: var(--edge), var(--bevel);
+}
+.card { padding: 14px; }
+.drawer { border-radius: 0; box-shadow: 3px 0 0 var(--ink), var(--bevel); }
+.sheet, .panel { border-radius: 0; }
+.sheet-bg, .drawer-bg { background: rgba(10, 6, 12, 0.6); }
+
+/* buttons: stone blocks; primary = rose block */
+.btn, .btn.ghost, .pill, .opt, .dock button, .couple button, .moodbtn, .tab {
+  border-radius: 0; border: 0; color: var(--cream); font-family: var(--sans); font-weight: 700;
+  background: url(./ui-tex/stone.png) 0 0 / var(--tx) var(--tx) repeat, #706c78;
+  box-shadow: var(--edge), var(--bevel);
+}
+.btn { background: url(./ui-tex/rose.png) 0 0 / var(--tx) var(--tx) repeat, #ec6296; padding: 11px 16px; letter-spacing: 0.04em; }
+.btn.ghost, .pill { background: url(./ui-tex/stone.png) 0 0 / var(--tx) var(--tx) repeat, #706c78; }
+.btn:hover, .pill:hover, .opt:hover { filter: brightness(1.12); }
+.btn:active, .pill:active, .opt:active, .dock button:active, .couple button:active, .moodbtn:active { box-shadow: var(--edge), var(--bevel-in); }
+.pill.on, .opt.on, .dock button.on, .moodbtn.on, .couple button.on {
+  background: url(./ui-tex/rose.png) 0 0 / var(--tx) var(--tx) repeat, #ec6296; box-shadow: var(--edge), var(--bevel-in);
+}
+.btn:disabled, .opt:disabled { filter: grayscale(0.8) brightness(0.7); opacity: 1; }
+.opt { padding: 10px; }
+.tag { border-radius: 0; background: #b8336f; color: #fff; box-shadow: 0 0 0 2px var(--ink); }
+
+/* inputs: sunken slot */
+.field {
+  border-radius: 0; border: 0; background: #241a26; color: var(--cream); font-family: var(--sans);
+  box-shadow: var(--edge), var(--bevel-in);
+}
+.field:focus { box-shadow: 0 0 0 3px #ff6fa8, var(--bevel-in); }
+input[type=range] { accent-color: #ec6296; }
+
+/* HUD */
+.dock { padding: 6px; gap: 6px; background: url(./ui-tex/planks.png) 0 0 / var(--tx) var(--tx) repeat, #a8754a; box-shadow: var(--edge), var(--bevel); }
+.dock button { width: 40px; height: 40px; }
+.chip {
+  border-radius: 0; border: 0; font-size: 13px; padding: 4px 8px;
+  background: url(./ui-tex/slot.png) 0 0 / 100% 100%, #3c303e; box-shadow: 0 0 0 2px var(--ink);
+}
+.joy {
+  border-radius: 0; border: 0; backdrop-filter: none;
+  background: url(./ui-tex/stone.png) 0 0 / var(--tx) var(--tx) repeat, #706c78; box-shadow: var(--edge), var(--bevel-in); opacity: 0.85;
+}
+.joy .knob { border-radius: 0; background: url(./ui-tex/rose.png) 0 0 / 36px 36px repeat, #ec6296; box-shadow: var(--edge), var(--bevel); }
+.round { border-radius: 0; }
+.jumpbtn { background: url(./ui-tex/stone.png) 0 0 / var(--tx) var(--tx) repeat, #706c78; box-shadow: var(--edge), var(--bevel); font-family: var(--serif); font-size: 12px; text-shadow: 2px 2px 0 #000; }
+.ctxbtn { background: url(./ui-tex/grass.png) 0 0 / 96px 96px no-repeat, #6cbf5a; border: 0; box-shadow: var(--edge), var(--bevel); text-shadow: 2px 2px 0 #000; font-family: var(--sans); font-size: 13px; padding-top: 22px; }
+.ctxbtn.off { filter: grayscale(0.7) brightness(0.75); opacity: 0.8; }
+.jumpbtn:active, .ctxbtn:active { box-shadow: var(--edge), var(--bevel-in); }
+.lovebar { border-radius: 0; border: 0; height: 14px; background: #241a26; box-shadow: 0 0 0 3px var(--ink), var(--bevel-in); }
+.lovebar i { background: repeating-linear-gradient(90deg, #ff4f93 0 14px, #c92a6c 14px 16px); box-shadow: none; }
+.couple button { padding: 7px 10px; font-size: 13px; color: #fff; }
+.where, .debug { border-radius: 0; }
+.where { background: rgba(26, 16, 24, 0.82); box-shadow: 0 0 0 2px var(--ink); }
+.badge .ring img { border-radius: 0; background: url(./ui-tex/planks.png) 0 0 / 36px 36px, #a8754a; box-shadow: 0 0 0 3px var(--ink); }
+.badge svg { display: none; }
+.badge .ring::after { content: ''; position: absolute; left: 4px; right: 4px; bottom: -8px; height: 6px; background: linear-gradient(90deg, #ff4f93 var(--e, 70%), #241a26 0); box-shadow: 0 0 0 2px var(--ink); }
+
+/* right mood rail + presence */
+.rail { background: url(./ui-tex/slate.png) 0 0 / var(--tx) var(--tx) repeat, #34283a; border-left: 3px solid var(--ink); box-shadow: inset 3px 0 0 rgba(255, 255, 255, 0.15); }
+.rail hr { border-top: 2px solid var(--ink); }
+.moodbtn { width: 31px; height: 31px; }
+.portrait { border-radius: 0; border: 0; box-shadow: 0 0 0 3px var(--ink), 0 0 0 5px var(--tint, #ec6296); }
+.cut img { filter: drop-shadow(3px 3px 0 var(--ink)); }
+.cut .mono, .mono { border-radius: 0; font-family: var(--serif); background: url(./ui-tex/rose.png) 0 0 / 36px 36px, #ec6296; }
+.cut > img[style] { border-radius: 0 !important; }
+.ring { border-radius: 0; }
+.dot { border-radius: 0; }
+
+/* toasts = little achievement plaques */
+.toast { border-left: 0; padding: 10px 12px; background: url(./ui-tex/slate.png) 0 0 / var(--tx) var(--tx), #34283a; box-shadow: var(--edge), var(--bevel); }
+.toast b { color: #ffd166; font-family: var(--sans); }
+
+/* world overlays */
+.bubble { border-radius: 0; background: #fff6ec; color: var(--ink); font-family: var(--sans); box-shadow: 0 0 0 3px var(--ink), 4px 4px 0 3px rgba(0, 0, 0, 0.35); }
+.popup { font-family: var(--serif); font-size: 14px; color: #ffd166; text-shadow: 2px 2px 0 var(--ink); }
+.banner { border-radius: 0; border: 0; background: #7a1f3d; box-shadow: 0 0 0 3px var(--ink); }
+.coupon { border-radius: 0; border: 3px dashed #ffd166; }
+.flare { border-radius: 0; box-shadow: var(--edge), var(--bevel); }
+.cookbar { border-radius: 0; border: 0; box-shadow: 0 0 0 3px var(--ink), var(--bevel-in); background: #241a26; }
+.cookbar .mark { border-radius: 0; }
+.keys button { border-radius: 0; box-shadow: 0 0 0 3px var(--ink), var(--bevel); font-family: var(--sans); }
+.movie img { border-radius: 0; box-shadow: 0 0 0 6px var(--ink), 0 0 0 12px #a8754a; }
+.star { border-radius: 0; }
+
+/* gate + countdown */
+.gate { background: linear-gradient(180deg, rgba(26, 16, 24, 0.25), rgba(26, 16, 24, 0.75)); }
+.cloud { border-radius: 0; filter: none; background: rgba(255, 246, 236, 0.16); box-shadow: 24px -16px 0 -4px rgba(255, 246, 236, 0.12); }
+.seat img { border-radius: 0 !important; box-shadow: 0 0 0 4px var(--ink), 0 0 0 9px var(--aura); filter: none; }
+.seat .ghost { border-radius: 0; border: 3px dashed #ffd1e3; background: rgba(26, 16, 24, 0.4); }
+.seat .mono { border-radius: 0; }
+.countdown { background: url(./ui-tex/dirt.png) 0 0 / var(--tx) var(--tx), #5a3f2b; }
+.countdown .n { font: 700 100px var(--serif); font-style: normal; color: #ffd1e3; text-shadow: 5px 5px 0 #b8336f, 10px 10px 0 var(--ink); }
+.part { filter: none; background: url(./ui-tex/grass.png) 0 0 / 96px 96px, #6cbf5a; box-shadow: 0 0 0 4px var(--ink); }
+.petals .petal { border-radius: 0; opacity: 0.6; }
+.petals .bokeh { display: none; }
+.rotate { background: url(./ui-tex/dirt.png) 0 0 / var(--tx) var(--tx), #5a3f2b; }
+.tint { mix-blend-mode: soft-light; opacity: 0.6; }
+canvas.scratch { border-radius: 0; }
+.badge span { margin-top: 12px; background: rgba(26, 16, 24, 0.8); padding: 1px 5px; box-shadow: 0 0 0 2px var(--ink); }
+.rail { padding-top: calc(env(safe-area-inset-top) + 118px); }
+.stage .small { background: rgba(26, 16, 24, 0.85); padding: 1px 5px; box-shadow: 0 0 0 2px var(--ink); white-space: nowrap; }
+.badge { width: auto; } .badge span { white-space: nowrap; }
+
+/* couple actions: bottom centre, between the joystick and the action buttons */
+.couplebar { left: calc(env(safe-area-inset-left) + 166px); right: calc(var(--rail) + 196px); bottom: 14px; display: flex; justify-content: center; align-items: flex-end; }
+.couplebar .couple { max-width: 100%; }
+
+/* passcode screen: fits short landscape phones, scrolls if it still doesn't */
+.pair { overflow-y: auto; touch-action: pan-y; padding: 12px; }
+.pair > .glass { margin: auto; padding: 16px 20px !important; gap: 9px; }
+.pair .brand { font-size: 32px !important; }

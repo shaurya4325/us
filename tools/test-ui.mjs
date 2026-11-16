@@ -4,7 +4,7 @@ import fs from 'node:fs';
 const OUT = process.argv[2]; fs.mkdirSync(OUT, { recursive: true });
 const BASE = 'http://localhost:5199/';
 const b = await launch();
-const sess = (who) => `localStorage.setItem('us:session', JSON.stringify({ roomId: 'test0000000000000000000000000002', who: '${who}', deviceId: '${who}-dev' })); localStorage.setItem('vu:mute','1'); 1`;
+const sess = (who) => `localStorage.setItem('us:session', JSON.stringify({ roomId: 'test0000000000000000000000000001', who: '${who}', deviceId: '${who}-dev', v: 2 })); localStorage.setItem('vu:mute','1'); 1`;
 const S = await b.page(BASE + '?as=shaurya&awake'); await sleep(1500); await S.eval(sess('shaurya')); await S.send('Page.reload'); await sleep(3000);
 await S.eval(`document.querySelector('.dock button[title="Us Checkup & Open Heart"]').click(); 1`); await sleep(900);
 await S.shot(`${OUT}/u1-checkup-drawer.png`);

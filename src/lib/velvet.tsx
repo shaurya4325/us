@@ -7,9 +7,9 @@ import { buzz, notify, PATTERNS, sfx, native, nativePrefs, askNotifyPermission, 
 
 export interface PersonState { since?: number; mood?: MoodId; moodAt?: number; online?: boolean; lastSeen?: number; cutout?: string; roomMode?: string; energy?: number; fcm?: string }
 export interface Ev { id: string; from: Who; to: Who; type: string; text?: string; data?: Doc; at: number }
-export interface Session { roomId: string; who: Who; deviceId: string }
+export interface Session { roomId: string; who: Who; deviceId: string; v?: number }
 
-const ONLINE_MS = 25_000;
+const ONLINE_MS = 16_000;
 const AWAKE = new URLSearchParams(location.search).has('awake'); // testing: two windows on one PC count as visible
 const visible = () => AWAKE || !document.hidden;
 export const isOnline = (p?: PersonState, now = Date.now()) => !!p?.online && now - (p.lastSeen ?? 0) < ONLINE_MS;
@@ -119,7 +119,7 @@ export function VelvetProvider({ s, children }: { s: Session; children: ReactNod
     let since = Date.now(), was = visible();
     const beat = () => { const on = visible(); if (on && !was) since = Date.now(); was = on; setMe({ online: on, lastSeen: Date.now(), since }); };
     beat();
-    const t = setInterval(beat, 8_000);
+    const t = setInterval(beat, 5_000);
     const vis = () => beat();
     const bye = () => setMe({ online: false, lastSeen: Date.now() });
     document.addEventListener('visibilitychange', vis); window.addEventListener('pagehide', bye);

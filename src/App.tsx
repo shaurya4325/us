@@ -24,6 +24,9 @@ const DRAWERS = [
   { id: 'capsule', icon: '💍', label: 'Until We Marry', C: Capsule },
 ];
 const SKEY = 'us:session';
+// The passcode is never stored in the app or the repo. It hashes to our room id; only that room exists in Firestore,
+// so any other code finds nothing. Sessions from the old partner-code pairing (no v: 2) must enter the passcode.
+const SESSION_V = 2;
 const load = (): Session | null => { try { return JSON.parse(localStorage.getItem(SKEY) ?? 'null'); } catch { return null; } };
 const deviceId = () => { let d = localStorage.getItem('us:device'); if (!d) { d = crypto.randomUUID(); localStorage.setItem('us:device', d); } return d; };
 
@@ -31,7 +34,8 @@ export default function App() {
   // ?as=arushi|shaurya lets two demo windows act as two phones
   const [s, setS] = useState<Session | null>(() => {
     const as = new URLSearchParams(location.search).get('as');
-    const saved = load();
+    let saved = load();
+    if (saved && saved.v !== SESSION_V) saved = null;
     return as && saved ? { ...saved, who: as as Who } : saved;
   });
   useEffect(() => {
@@ -44,7 +48,7 @@ export default function App() {
       <div className="rotate"><div className="col center"><div style={{ fontSize: 48 }}>📱↻</div><h2>Turn your phone sideways</h2><div className="muted">us!! is played in landscape.</div></div></div>
       {!s ? <Pairing onPaired={(x) => { localStorage.setItem(SKEY, JSON.stringify(x)); setS(x); }} /> : (
         <VelvetProvider s={s}>
-          <Home onLeave={() => { localStorage.removeItem(SKEY); setS(null); }} />
+          <Home onLeave={() => { setDoc(`${ROOT}/${s.roomId}`, { seats: { [s.who]: null } }); localStorage.removeItem(SKEY); setS(null); }} />
         </VelvetProvider>
       )}
     </>
@@ -83,11 +87,12 @@ function Home({ onLeave }: { onLeave: () => void }) {
     if (!lostAt.current) lostAt.current = Date.now();
     if (hard || Date.now() - lostAt.current > 6000) {
       setPhase('gate');
-      toast(`🌙 ${PEOPLE[partner].name} left our world`, 'Everything is saved. The gate opens again when you are both here.');
+      if (phase === 'world') toast(`🌙 ${PEOPLE[partner].name} left our world`, 'Everything is saved. The gate opens again when you are both here.');
     }
   }, [both, now, phase, states, me, partner, toast]);
   useEffect(() => { if (phase === 'gate') music('sunset'); }, [phase]);
-  const enterWorld = useCallback(() => setPhase('world'), []);
+  const bothRef = useRef(both); bothRef.current = both;
+  const enterWorld = useCallback(() => setPhase(bothRef.current ? 'world' : 'gate'), []);
 
   const D = DRAWERS.find((d) => d.id === drawer);
   const pm = moodById(states[partner].mood);
@@ -142,13 +147,22 @@ function Pairing({ onPaired }: { onPaired: (s: Session) => void }) {
     setBusy(true); setErr('');
     try {
       const roomId = await roomIdFor(code), dev = deviceId(), path = `${ROOT}/${roomId}`;
-      const room = (await getDoc(path)) ?? {};
-      const seats = room.seats ?? {};
-      if (seats[who!] && seats[who!] !== dev) throw new Error(`${PEOPLE[who!].name}'s seat is already taken on another phone. Free it in Settings on that phone (Unpair).`);
+      const room = await getDoc(path);
+      // demo mode (no Firebase) has nothing to check against, so the first code creates the local world
+      if (!room && getStatus() !== 'demo') { setCode(''); throw new Error('Wrong passcode. This world is only for us two.'); }
+      const seats = room?.seats ?? {};
+      if (seats[who!] && seats[who!] !== dev) {
+        // the same name on another phone: allowed only if that phone has been away 10+ minutes (e.g. reinstalled app)
+        const st = await getDoc(`${path}/state/${who}`);
+        if (st?.lastSeen && Date.now() - st.lastSeen < 10 * 60_000) throw new Error(`${PEOPLE[who!].name} is already in on another phone right now.`);
+      }
       const next = { ...seats, [who!]: dev };
-      await setDoc(path, { seats: next, paired: Object.keys(next).length === 2, maxMembers: 2, createdAt: room.createdAt ?? Date.now() });
-      onPaired({ roomId, who: who!, deviceId: dev });
-    } catch (e: any) { setErr(e.message || 'Could not pair'); }
+      await setDoc(path, { seats: next, maxMembers: 2, createdAt: room?.createdAt ?? Date.now() });
+      onPaired({ roomId, who: who!, deviceId: dev, v: SESSION_V });
+    } catch (e: any) {
+      const c = String(e?.code ?? '');
+      setErr(c.includes('permission') || c.includes('unavailable') ? 'Could not reach our world. Check the internet and try again.' : e?.message || 'Could not open');
+    }
     setBusy(false);
   };
   return (
@@ -157,13 +171,15 @@ function Pairing({ onPaired }: { onPaired: (s: Session) => void }) {
       <motion.div className="glass card col" style={{ width: '100%', maxWidth: 420, padding: 22 }} initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={spring}>
         <div className="brand" style={{ fontSize: 40 }}>us!!</div>
         <div className="muted">A tiny world for exactly two people.</div>
-        <input className="field" placeholder="Partner Code" value={code} maxLength={12} onChange={(e) => setCode(e.target.value.toUpperCase())} style={{ letterSpacing: '0.2em', fontWeight: 700, textAlign: 'center' }} />
+        <input className="field" type="password" inputMode="numeric" autoComplete="off" placeholder="Our passcode" value={code} maxLength={8}
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} onKeyDown={(e) => e.key === 'Enter' && who && code.length === 8 && go()} style={{ letterSpacing: '0.35em', fontWeight: 700, textAlign: 'center' }} />
+        <div className="muted small">Who's holding this phone?</div>
         <div className="grid2">
           {(['arushi', 'shaurya'] as Who[]).map((w) => <Tap key={w} className={'pill' + (who === w ? ' on' : '')} onClick={() => setWho(w)}>{PEOPLE[w].name}</Tap>)}
         </div>
         {err && <div className="banner">{err}</div>}
-        <Tap className="btn" disabled={busy || code.replace(/[^A-Z0-9]/g, '').length < 6 || !who} onClick={go}>{busy ? 'Pairing…' : 'Pair our phones 💗'}</Tap>
-        <div className="small muted center">{getStatus() === 'demo' ? 'Demo mode: no Firebase keys, data stays on this device.' : 'Two seats only. Once both are taken, the room locks.'}</div>
+        <Tap className="btn" disabled={busy || code.length !== 8 || !who} onClick={go}>{busy ? 'Opening…' : 'Enter us!! 💗'}</Tap>
+        <div className="small muted center">{getStatus() === 'demo' ? 'Demo mode: no Firebase keys, data stays on this device.' : 'Two seats only, one phone each. The world opens when you are both here.'}</div>
       </motion.div>
     </div>
   );

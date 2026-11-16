@@ -5,6 +5,7 @@ import { PEOPLE, type Who } from '../config/people';
 import { isOnline, useVelvet, type PersonState } from '../lib/velvet';
 import { buzz, isMuted, setMuted, sfx } from '../lib/fx';
 import { makeCutout } from '../lib/media';
+import { syncMute } from '../world/sound';
 
 export const spring = { type: 'spring', stiffness: 420, damping: 22 } as const;
 export const Tap = ({ children, className = '', onClick, disabled, style, title }: { children: ReactNode; className?: string; onClick?: () => void; disabled?: boolean; style?: React.CSSProperties; title?: string }) => (
@@ -175,7 +176,7 @@ export function Settings({ onClose, onLeave }: { onClose: () => void; onLeave: (
             <label className="btn ghost center">{busy || 'Upload photo'}<input type="file" accept="image/*" hidden disabled={!!busy} onChange={(e) => pick(e.target.files?.[0])} /></label>
           </div>
         </div>
-        <Tap className="btn ghost" onClick={() => { setMuted(!mute); setMute(!mute); }}>{mute ? '🔇 Sounds off' : '🔊 Sounds on'}</Tap>
+        <Tap className="btn ghost" onClick={() => { setMuted(!mute); setMute(!mute); syncMute(); }}>{mute ? '🔇 Sounds off' : '🔊 Sounds on'}</Tap>
         <div className="small muted">Sync: {status === 'live' ? '🟢 live (Firebase)' : status === 'demo' ? '🟡 demo (this device only)' : '🔴 blocked by Firestore rules'}</div>
         <Tap className="btn ghost" onClick={onLeave}>Unpair this phone</Tap>
       </motion.div>

@@ -6,7 +6,7 @@ import fs from 'node:fs';
 const OUT = process.argv[2] || 'shots'; fs.mkdirSync(OUT, { recursive: true });
 const BASE = 'http://localhost:5199/';
 const b = await launch();
-const sess = (who) => `localStorage.setItem('us:session', JSON.stringify({ roomId: 'test0000000000000000000000000001', who: '${who}', deviceId: '${who}-dev' })); localStorage.setItem('vu:mute','1'); 1`;
+const sess = (who) => `localStorage.setItem('us:session', JSON.stringify({ roomId: 'test0000000000000000000000000001', who: '${who}', deviceId: '${who}-dev', v: 2 })); localStorage.setItem('vu:mute','1'); 1`;
 const A = await b.page(BASE + '?awake');
 await sleep(1500); await A.eval(sess('arushi')); await A.eval('localStorage.clear(); ' + sess('arushi'));
 await A.send('Page.reload'); await sleep(3500);
@@ -57,7 +57,7 @@ await sleep(800);
 await A.shot(`${OUT}/11-upper-floor.png`);
 for (const [n, p] of [['A', A], ['B', B]]) console.log(n, 'errors:', p.errors.slice(0, 8), 'hud:', await p.eval('document.querySelector(".debug")?.textContent'));
 // disconnect: B leaves → A back at gate
-await B.close(); await sleep(2500);
+await B.close(); await sleep(24000);
 await A.shot(`${OUT}/12-partner-left.png`);
 console.log('A world after B left:', await A.eval('!!document.querySelector(".world")'));
 b.close();
