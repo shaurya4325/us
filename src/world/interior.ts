@@ -101,8 +101,8 @@ const LAYOUT: Record<RoomType, (k: Kit, g: Kit) => Built> = {
       cols: [[2.0, 0.6, 0.7]],
       extras: (gr, ox, oy, oz) => {
         const loader = new THREE.TextureLoader(), base = import.meta.env.BASE_URL;
-        ['arushi-happy-1', 'arushi-cute-1', 'arushi-chill-1'].forEach((p, i) => {
-          const t = loader.load(`${base}photos/arushi/${p}.webp`); t.colorSpace = THREE.SRGBColorSpace;
+        ['arushi/arushi-happy-1', 'shaurya/shaurya-happy-1', 'arushi/arushi-cute-1'].forEach((p, i) => {
+          const t = loader.load(`${base}photos/${p}.webp`); t.colorSpace = THREE.SRGBColorSpace;
           const m = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 1.45), new THREE.MeshBasicMaterial({ map: t }));
           m.position.set(ox + i * 1.9, oy + 1.6, oz - 4.39); gr.add(m);
         });

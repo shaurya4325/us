@@ -23,7 +23,10 @@ export const MOOD_PHOTOS: Record<Who, Partial<Record<MoodId, string[]>>> = {
     happy: P('arushi', 'happy', 2), cute: P('arushi', 'cute', 2), chill: P('arushi', 'chill', 2),
     sleepy: P('arushi', 'sleepy', 1), sad: P('arushi', 'sad', 1), dramatic: P('arushi', 'dramatic', 2),
   },
-  shaurya: {}, // waiting for Shaurya's photos; falls back to his in-app cutout / monogram
+  shaurya: {
+    happy: P('shaurya', 'happy', 1), cute: P('shaurya', 'cute', 1), chill: P('shaurya', 'chill', 1),
+    sleepy: P('shaurya', 'sleepy', 1), sad: P('shaurya', 'sad', 1), dramatic: P('shaurya', 'dramatic', 1),
+  },
 };
 
 /** Photo for a person's mood with clean fallbacks: exact mood → chill → any photo → uploaded cutout → null (monogram). */

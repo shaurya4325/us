@@ -5,7 +5,8 @@ import { CABLE_COST, ROOMS, canAfford, costText, negate, type RoomCell } from '.
 import type { EngineAPI, Interactable, SceneAPI, WorldDoc } from './types';
 import type { Who } from '../config/people';
 
-export const HALF = 19;
+export const HALF = 26;                       // island is 52 x 52 (was 38 x 38)
+const EDGE = HALF - 3;                        // walkable radius
 const POND = { x: -6, z: 5, r: 3.3 };
 const PLOT = { x: 5.5, z: -4.5 };            // starter room cell (0,0) centre
 const CELL = 4;                               // exterior cottage block size
@@ -27,7 +28,7 @@ export function heightAt(x: number, z: number) {
   const pl = Math.hypot(x - PLOT.x, z - PLOT.z);
   if (pl < 9) h = THREE.MathUtils.lerp(0.3, h, THREE.MathUtils.smoothstep(pl, 5, 9));   // flatten the house plot
   const r = superR(x, z);
-  if (r > 16) h -= Math.pow((r - 16) / 3.2, 2) * 3.2;
+  if (r > EDGE) h -= Math.pow((r - EDGE) / 3.2, 2) * 3.2;
   return h;
 }
 export const cellPos = (c: { gx: number; gz: number }) => [PLOT.x + c.gx * CELL, PLOT.z + c.gz * CELL] as const;
@@ -54,7 +55,7 @@ export class Overworld implements SceneAPI {
   constructor() {
     const S = this.scene;
     S.background = skyTexture();
-    S.fog = new THREE.Fog(0xe9f4f0, 30, 62);
+    S.fog = new THREE.Fog(0xe9f4f0, 34, 84);
     this.buildGround(); this.buildWater(); this.buildNodes(); this.buildDecor(); this.buildClouds(); this.buildLife();
     S.add(this.house);
     const pk = new Kit().ball(0.14, 0xfff0c8).build();
@@ -63,7 +64,7 @@ export class Overworld implements SceneAPI {
   }
 
   private buildGround() {
-    const N = 64, geo = new THREE.PlaneGeometry(HALF * 2 + 4, HALF * 2 + 4, N, N);
+    const N = 88, geo = new THREE.PlaneGeometry(HALF * 2 + 4, HALF * 2 + 4, N, N);
     geo.rotateX(-Math.PI / 2);
     const p = geo.attributes.position, col = new Float32Array(p.count * 3), c = new THREE.Color(), r = rand(7);
     const g1 = new THREE.Color(0x7ec88b), g2 = new THREE.Color(0x99df9e), sand = new THREE.Color(0xf3e3b5), cliff = new THREE.Color(0xd7c3a8);
@@ -82,13 +83,13 @@ export class Overworld implements SceneAPI {
     // grass tufts: 1 instanced draw with wind
     const tuft = new Kit();
     for (let k = 0; k < 3; k++) tuft.add(new THREE.ConeGeometry(0.045, 0.34, 3), 0xffffff, Math.cos(k * 2.1) * 0.05, 0.17, Math.sin(k * 2.1) * 0.05, 0.15 * Math.cos(k * 2.1), 0, 0.15 * Math.sin(k * 2.1));
-    const gm = windy(mat(), this.uTime, 0.35), NG = 1700;
+    const gm = windy(mat(), this.uTime, 0.35), NG = 3300;
     const grass = new THREE.InstancedMesh(tuft.build(), gm, NG);
     const gc = new THREE.Color();
     let n = 0;
     for (let tries = 0; n < NG && tries < NG * 3; tries++) {
-      const x = (r() - 0.5) * 33, z = (r() - 0.5) * 33;
-      if (superR(x, z) > 16 || Math.hypot(x - POND.x, z - POND.z) < POND.r + 0.5) continue;
+      const x = (r() - 0.5) * (EDGE * 2 + 1), z = (r() - 0.5) * (EDGE * 2 + 1);
+      if (superR(x, z) > EDGE || Math.hypot(x - POND.x, z - POND.z) < POND.r + 0.5) continue;
       const s = 0.7 + r() * 0.8;
       this.m4.compose(this.v.set(x, heightAt(x, z), z), this.q.setFromEuler(this.e.set(0, r() * 6, 0)), this.s3.set(s, s, s));
       grass.setMatrixAt(n, this.m4);
@@ -98,15 +99,15 @@ export class Overworld implements SceneAPI {
     this.scene.add(grass);
     // decorative glowing wildflowers (yellow, pink, white)
     const fl = new Kit().cyl(0.012, 0.012, 0.22, 0x5aa86a).ball(0.06, 0xffffff, 0, 0.24, 0, 1, 0.7, 1, 0).build();
-    const flowers = new THREE.InstancedMesh(fl, windy(mat(), this.uTime, 0.25), 520);
+    const flowers = new THREE.InstancedMesh(fl, windy(mat(), this.uTime, 0.25), 950);
     const fcols = [0xfff07a, 0xff9ec4, 0xffffff, 0xffc94a, 0xff6fa8];
     const glowPos: number[] = [], glowCol: number[] = [];
     n = 0;
-    for (let tries = 0; n < 520 && tries < 3000; tries++) {
+    for (let tries = 0; n < 950 && tries < 7000; tries++) {
       // clustered patches
-      const cx = Math.round((r() - 0.5) * 6) * 5, cz = Math.round((r() - 0.5) * 6) * 5;
+      const cx = Math.round((r() - 0.5) * 9) * 5, cz = Math.round((r() - 0.5) * 9) * 5;
       const x = cx + (r() - 0.5) * 5, z = cz + (r() - 0.5) * 5;
-      if (superR(x, z) > 15.8 || Math.hypot(x - POND.x, z - POND.z) < POND.r + 0.6 || Math.hypot(x - PLOT.x, z - PLOT.z) < 5) continue;
+      if (superR(x, z) > EDGE - 0.2 || Math.hypot(x - POND.x, z - POND.z) < POND.r + 0.6 || Math.hypot(x - PLOT.x, z - PLOT.z) < 5) continue;
       const s = 0.8 + r() * 0.7, y = heightAt(x, z);
       this.m4.compose(this.v.set(x, y, z), this.q.identity(), this.s3.set(s, s, s));
       flowers.setMatrixAt(n, this.m4);
@@ -134,7 +135,7 @@ export class Overworld implements SceneAPI {
 
   private buildNodes() {
     const r = rand(42), list: Node[] = [];
-    const free = (x: number, z: number, d: number) => superR(x, z) < 15 && Math.hypot(x - POND.x, z - POND.z) > POND.r + 1.4 && Math.hypot(x - PLOT.x, z - PLOT.z) > 8.5
+    const free = (x: number, z: number, d: number) => superR(x, z) < EDGE - 1 && Math.hypot(x - POND.x, z - POND.z) > POND.r + 1.4 && Math.hypot(x - PLOT.x, z - PLOT.z) > 8.5
       && Math.hypot(x, z - 6) > 3 && Math.hypot(x - NEST.x, z - NEST.z) > 2.2 && Math.hypot(x - HOPPER.x, z - HOPPER.z) > 2.2 && Math.hypot(x - BENCH.x, z - BENCH.z) > 2
       && ANCHORS.every((a) => Math.hypot(x - a.x, z - a.z) > 1.8) && list.every((n) => Math.hypot(n.x - x, n.z - z) > d);
     const place = (kind: Node['kind'], cx: number, cz: number, spread: number, count: number, d: number, prefix: string) => {
@@ -148,6 +149,11 @@ export class Overworld implements SceneAPI {
     place('birch', -2, 13, 10, 3, 1.7, 'b'); place('cherry', 6, 12, 8, 3, 1.7, 'c');
     place('rock', 2, -12, 9, 7, 1.4, 'r'); place('rock', -13, 9, 5, 3, 1.4, 'r');
     place('crystal', 5, -13, 7, 4, 1.4, 'x'); place('crystal', 13, -6, 4, 2, 1.4, 'x');
+    // the outer ring of the bigger island
+    place('birch', -18, -14, 8, 6, 1.7, 'b'); place('cherry', 18, 15, 8, 6, 1.7, 'c'); place('cherry', -17, 15, 7, 4, 1.7, 'c');
+    place('birch', 16, -17, 7, 4, 1.7, 'b'); place('rock', -19, 2, 6, 4, 1.4, 'r'); place('rock', 19, -4, 6, 3, 1.4, 'r');
+    place('crystal', -14, -19, 5, 3, 1.4, 'x'); place('crystal', 6, 19, 6, 2, 1.4, 'x');
+    place('flower', 0, 19, 8, 2, 2, 'f'); place('flower', -19, -6, 6, 2, 2, 'f'); place('flower', 19, 8, 6, 2, 2, 'f');
     place('flower', -4, -9, 8, 3, 2, 'f'); place('flower', 10, -1, 6, 2, 2, 'f'); place('flower', -9, 12, 5, 2, 2, 'f');
     this.nodes = list;
     const trees = list.filter((n) => n.kind === 'birch' || n.kind === 'cherry').length + 20;  // +20 planted saplings
@@ -245,10 +251,10 @@ export class Overworld implements SceneAPI {
   }
 
   private buildClouds() {
-    const r = rand(77), N = 150;
+    const r = rand(77), N = 200;
     this.clouds = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 2), new THREE.MeshMatcapMaterial({ matcap: mat().matcap!, color: 0xffffff }), N);
     for (let i = 0; i < N; i++) {
-      const a = (i / N) * Math.PI * 2 + r() * 0.05, rr = 19.5 + r() * 7, sq = 1 / Math.pow(Math.pow(Math.abs(Math.cos(a)), 4) + Math.pow(Math.abs(Math.sin(a)), 4), 0.25);
+      const a = (i / N) * Math.PI * 2 + r() * 0.05, rr = HALF + 0.5 + r() * 7, sq = 1 / Math.pow(Math.pow(Math.abs(Math.cos(a)), 4) + Math.pow(Math.abs(Math.sin(a)), 4), 0.25);
       this.cloudBase.push({ x: Math.cos(a) * rr * sq * 0.92, y: -2.6 + r() * 2.2, z: Math.sin(a) * rr * sq * 0.92, s: 1.6 + r() * 2.6, p: r() * 6 });
     }
     this.clouds.frustumCulled = false;
@@ -261,7 +267,7 @@ export class Overworld implements SceneAPI {
     this.flies = new THREE.InstancedMesh(wing, basic(0xffffff, { side: THREE.DoubleSide, vertexColors: true }), 10);
     const c = new THREE.Color(), cols = [0xffd27a, 0x9fd8ff, 0xff9ec4, 0xffffff, 0xb9a3e8];
     for (let i = 0; i < 10; i++) {
-      const cx = (r() - 0.5) * 24, cz = (r() - 0.5) * 24;
+      const cx = (r() - 0.5) * 36, cz = (r() - 0.5) * 36;
       this.bugs.push({ x: cx, y: 1, z: cz, a: r() * 6, cx, cz, gone: 0 });
       this.flies.setColorAt(i, c.set(cols[i % cols.length]));
     }
@@ -344,7 +350,7 @@ export class Overworld implements SceneAPI {
   spawn(who: Who): [number, number, number] { const x = who === 'shaurya' ? -0.7 : 0.7; return [x, heightAt(x, 6), 6]; }
 
   ground(x: number, z: number, _y?: number) {
-    if (superR(x, z) > 16.2) return null;
+    if (superR(x, z) > EDGE + 0.2) return null;
     if (Math.hypot(x - POND.x, z - POND.z) < POND.r - 0.2) return null;
     for (const n of this.nodes) {
       if (!n.id || (this.world.nodes?.[n.id] ?? 0) > Date.now()) continue;
@@ -447,7 +453,7 @@ export class Overworld implements SceneAPI {
 
   /** planting spot for the watering can when nothing else is near */
   plantAt(x: number, z: number) {
-    if (superR(x, z) > 14.5 || Math.hypot(x - POND.x, z - POND.z) < POND.r + 1.2 || Math.hypot(x - PLOT.x, z - PLOT.z) < 7) return false;
+    if (superR(x, z) > EDGE - 1.5 || Math.hypot(x - POND.x, z - POND.z) < POND.r + 1.2 || Math.hypot(x - PLOT.x, z - PLOT.z) < 7) return false;
     return this.nodes.every((n) => !n.id || Math.hypot(n.x - x, n.z - z) > 1.4) && Object.keys(this.world.planted ?? {}).length < 20;
   }
 
