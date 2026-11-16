@@ -23,7 +23,7 @@ There is one shared passcode, and you both enter it with your name. It never app
 - Only rooms that exist in Firestore are accepted, so every other passcode is refused.
 - Register your passcode's room once with `node tools/create-room.mjs <passcode>`. Run it again if you ever change the passcode.
 - Each name is held by one phone. **Settings → Unpair** frees it. A name also frees itself after its phone has been away for 10 minutes, for example after a reinstall.
-- Demo mode (no Firebase) accepts the first code typed, because the world is local only.
+- Demo mode (no Firebase) accepts any code, and each code makes its own local world on this PC.
 
 ## Build the APK locally (no Android Studio)
 
