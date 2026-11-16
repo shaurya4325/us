@@ -36,12 +36,13 @@ check('Felled tree goes on respawn timer', (w1.nodes?.b0 ?? 0) > Date.now());
 await shot(A, 'chopped');
 w0 = w1; await gather('r0', 2); w1 = await W(); check('Mine rock → stone', (w1.inv?.stone ?? 0) > (w0.inv?.stone ?? 0), `${w0.inv?.stone ?? 0} → ${w1.inv?.stone}`);
 w0 = w1; await gather('x0', 2); w1 = await W(); check('Mine rose-crystal → crystal', (w1.inv?.crystal ?? 0) > (w0.inv?.crystal ?? 0));
-w0 = w1; await gather('f0', 1); w1 = await W(); check('Pick flowers → flower', (w1.inv?.flower ?? 0) > (w0.inv?.flower ?? 0));
+const fid = await A.eval(`__us.cur.nodes.find(n=>n.kind==='flower').id`);
+w0 = w1; await gather(fid, 1); w1 = await W(); check('Pick flowers → flower', (w1.inv?.flower ?? 0) > (w0.inv?.flower ?? 0));
 // crafting through the bench panel UI
 await A.eval(`__usPatch({}, { 'inv.wood': 60, 'inv.stone': 40, 'inv.flower': 30, 'inv.bug': 5 })`); await sleep(300);
-await A.eval(`__us.ui('craft'); 1`); await sleep(600);
-await A.eval(`[...document.querySelectorAll('.panel .opt')].filter(o=>!o.disabled).forEach(o=>o.click()); 1`); await sleep(600);
-w1 = await W(); check('Craft can/net/rod at the bench', w1.tools?.can && w1.tools?.net && w1.tools?.rod, JSON.stringify(w1.tools));
+await A.eval(`__us.ui('station','table'); 1`); await sleep(600);
+await A.eval(`(async()=>{ for (const t of ['Watering Can','Butterfly Net','Fishing Rod']) { [...document.querySelectorAll('.recipes .slot')].find(s=>s.title===t)?.click(); await new Promise(r=>setTimeout(r,250)); [...document.querySelectorAll('.recipe .btn')].find(b=>b.textContent.includes('Craft') && !b.textContent.includes('Together'))?.click(); await new Promise(r=>setTimeout(r,350)); } return 1 })()`); await sleep(400);
+w1 = await W(); check('Craft can/net/rod at the crafting table', w1.tools?.can && w1.tools?.net && w1.tools?.rod, JSON.stringify(w1.tools));
 await shot(A, 'craft-panel');
 await A.eval(`document.querySelector('.drawer-bg')?.click(); 1`); await sleep(400);
 // net + rod (random outcomes, so retry)
@@ -71,24 +72,27 @@ await shot(A, 'build-panel');
 await A.eval(`[...document.querySelectorAll('.panel .opt')].find(o=>o.textContent.includes('Kitchen'))?.click(); 1`); await sleep(600);
 const k = Object.values((await W()).rooms ?? {}).find((r) => r.type === 'kitchen');
 check('Expand: kitchen on the right wing via panel', k && k.gx === 1 && k.gz === 0 && k.lv === 0, JSON.stringify(k));
-const rest = { greenhouse: [-1, 0, 0], pool: [0, -1, 0], cinema: [1, -1, 0], observatory: [-1, -1, 0], cuddle: [0, 1, 0], nursery: [1, 1, 0], gallery: [-1, 1, 0], rooftop: [0, 0, 1] };
+const rest = { greenhouse: [-1, 0, 0], pool: [0, -1, 0], cinema: [1, -1, 0], observatory: [-1, -1, 0], cuddle: [0, 1, 0], nursery: [1, 1, 0], gallery: [-1, 1, 0], rooftop: [0, 0, 1], living: [1, 0, 1], music: [0, -1, 1] };
 await A.eval(`__usPatch(${JSON.stringify(Object.fromEntries(Object.entries(rest).map(([t, [gx, gz, lv]], i) => [`rooms.t${i}`, { id: `t${i}`, type: t, gx, gz, lv, by: 'arushi', at: i }])))})`);
 await sleep(800);
-check('All 10 room types built', Object.keys((await W()).rooms ?? {}).length === 10);
+check('All 12 room types built', Object.keys((await W()).rooms ?? {}).length === 12);
 await A.eval(`(async()=>{ const e=__us; e.player.x=3; e.player.z=5.5; e.player.y=e.cur.ground(3,5.5,5); return 1 })()`); await B.eval(`(async()=>{ const e=__us; e.player.x=12; e.player.z=4; e.player.y=e.cur.ground(12,4,5); return 1 })()`);
 await sleep(2500);
 await shot(A, 'house-10-rooms');
 
 // ---------- panels from the world ----------
-for (const [id, data, want] of [['cook', null, 'Kitchen'], ['outfit', null, 'Wardrobe'], ['petcare', 'bowls', 'Treat'], ['wish', 'jar', 'Wish Jar'], ['music', null, 'Vinyl'], ['piano', null, 'Music Studio'], ['trophy', null, 'Milestones']]) {
+await A.eval(`__usPatch({}, { 'inv.nectar': 10, 'inv.cotton': 10 })`); await sleep(300);
+for (const [id, data, want] of [['station', 'hearth', 'Hearth'], ['outfit', null, 'Wardrobe'], ['petcare', 'bowls', 'Treat'], ['wish', 'jar', 'Wish Jar'], ['music', null, 'Vinyl'], ['piano', null, 'Music Studio'], ['trophy', null, 'Milestones']]) {
   await A.eval(`__us.ui('${id}', ${JSON.stringify(data)}); 1`); await sleep(500);
   const h = await A.eval(`document.querySelector('.panel h2')?.textContent || ''`);
   check(`Panel "${id}" opens`, h.includes(want), h);
-  if (id === 'cook') {
-    await A.eval(`document.querySelector('.panel .opt').click(); 1`); await sleep(300);
-    for (let i = 0; i < 3; i++) { await A.eval(`[...document.querySelectorAll('.panel button')].find(b=>b.textContent.includes('Now'))?.click(); 1`); await sleep(350); }
+  if (id === 'station') {
+    await A.eval(`[...document.querySelectorAll('.recipes .slot')].find(s=>s.title==='Sakura Mochi')?.click(); 1`); await sleep(300);
+    await A.eval(`[...document.querySelectorAll('.recipe .btn')].find(b=>b.textContent.includes('Cook'))?.click(); 1`); await sleep(500);
+    for (let i = 0; i < 3; i++) { await A.eval(`[...document.querySelectorAll('.panel button')].find(b=>b.textContent.includes('Now'))?.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true})); 1`); await sleep(350); }
     await shot(A, 'cook-done');
-    check('Cooking mini-game finishes and saves the dish', Object.keys((await W()).dishes ?? {}).length > 0);
+    check('Hearth cooking mini-game makes a treat', ((await W()).inv?.mochi ?? 0) > 0);
+    await A.eval(`[...document.querySelectorAll('.panel button')].find(b=>b.textContent.includes('Serve'))?.click(); 1`); await sleep(300);
   }
   if (id === 'outfit') { await A.eval(`document.querySelectorAll('.panel .opt')[3].click(); 1`); await sleep(300); check('Wardrobe changes cape (synced)', (await W()).capes?.arushi === 3); }
   if (id === 'wish') {
@@ -110,16 +114,20 @@ check('Movie night overlay opens and closes', !(await A.eval('!!document.querySe
 await A.send('Page.bringToFront');
 await A.eval(`(()=>{const e=__us; e.player.x=2; e.player.z=7; e.player.y=e.cur.ground(2,7,5); return 1})()`);
 await B.eval(`(()=>{const e=__us; e.player.x=2.8; e.player.z=7; e.player.y=e.cur.ground(2.8,7,5); return 1})()`);
-let btns = 0; for (let i = 0; i < 50 && btns < 6; i++) { await sleep(500); btns = await A.eval('document.querySelectorAll(".couple button").length'); }
-check('Love meter fills → 6 couple buttons', btns === 6, `${btns} buttons`);
-for (const kind of ['Kiss', 'Hug', 'Dance', 'Head Pat', 'Whisper']) { await A.eval(`[...document.querySelectorAll('.couple button')].find(b=>b.textContent.includes('${kind}'))?.click(); 1`); await sleep(kind === 'Kiss' ? 500 : 1200); if (kind === 'Kiss') await shot(B, 'kiss-on-shaurya'); }
+let near = false; for (let i = 0; i < 30 && !near; i++) { await sleep(500); near = await A.eval('document.querySelector(".emote")?.classList.contains("near")'); }
+await A.eval(`document.querySelector('.emote').click(); 1`); await sleep(600);
+const btns = await A.eval('document.querySelectorAll(".emote-fan .emo:not(.off)").length');
+check('Near your partner → emote button opens 7 couple actions', near && btns === 7, `${btns} enabled`);
+await A.eval(`document.querySelector('.emote-bg')?.click(); 1`); await sleep(300);
+const emote = (k) => A.eval(`(async()=>{ document.querySelector('.emote').click(); await new Promise(r=>setTimeout(r,450)); [...document.querySelectorAll('.emote-fan .emo')].find(b=>b.textContent.includes('${k}'))?.click(); return 1 })()`);
+for (const kind of ['Kiss', 'Hug', 'Dance', 'Head pat', 'Whisper']) { await emote(kind); await sleep(kind === 'Kiss' ? 500 : 1200); if (kind === 'Kiss') await shot(B, 'kiss-on-shaurya'); }
 await sleep(600);
 const st = (await W()).stats ?? {};
 check('Kiss/hug/dance counted', st.kiss >= 1 && st.hug >= 1 && st.dance >= 1, JSON.stringify(st));
 check('Whisper bubble appears on partner screen', await B.eval('document.querySelectorAll(".bubble").length') > 0);
-await A.eval(`[...document.querySelectorAll('.couple button')].find(b=>b.textContent.includes('Hold'))?.click(); 1`); await sleep(600);
-check('Hold hands toggles on both phones', await A.eval('__us.holding') === 'arushi' && await B.eval('__us.holding') === 'arushi');
-await A.eval(`[...document.querySelectorAll('.couple button')].find(b=>b.textContent.includes('Let go'))?.click(); 1`); await sleep(400);
+await emote('Hold hands'); await sleep(700);
+check('Hold hands toggles on both phones', await A.eval('__us.holdingWho') === 'arushi' && await B.eval('__us.holdingWho') === 'arushi');
+await emote('Let go'); await sleep(400);
 
 // ---------- interior: black fade, unified house, every object ----------
 await A.eval(`__us.enter(); 1`); await B.eval(`__us.enter(); 1`); await sleep(1500);
@@ -131,7 +139,7 @@ for (const r of rooms) {
   await sleep(shoot ? 1300 : 250);
   if (shoot) await shot(A, 'room-' + r.type);
 }
-const spots = JSON.parse(await A.eval(`JSON.stringify(__us.cur.interactables().map(i=>({id:i.id,x:i.x,z:i.z,y:i.y??0})))`));
+const spots = JSON.parse(await A.eval(`JSON.stringify(__us.cur.interactables(0,0,0,__us).map(i=>({id:i.id,x:i.x,z:i.z,y:i.y??0})))`));
 let opened = 0, errs0 = A.errors.length;
 for (const s of spots.filter((x) => x.id !== 'exit')) {
   await A.eval(`(()=>{const e=__us; e.player.x=${s.x}; e.player.z=${s.z}; e.player.y=${s.y}; e.cur.interact('${s.id}', e); return 1})()`); await sleep(350);
@@ -150,11 +158,11 @@ const swim = await A.eval(`(async()=>{ const e=__us; e.player.x=${pool.ox}+1; e.
 check('Walking into the pool swims', swim === 'swim', swim);
 await sleep(300); await shot(A, 'swimming');
 const draws = await A.eval('__us.renderer.info.render.calls');
-check('Interior with 10 rooms stays under 75 draw calls', draws < 75, `${draws} draws`);
+check('Interior with 12 rooms stays under 80 draw calls', draws < 80, `${draws} draws`);
 await A.eval(`__us.exit(); 1`); await sleep(1500);
 check('Exit door → back to the meadow', await A.eval('__us.cur.kind') === 'over');
 const odraws = await A.eval('__us.renderer.info.render.calls');
-check('Overworld stays under 75 draw calls', odraws < 75, `${odraws} draws`);
+check('Overworld stays under 80 draw calls', odraws < 80, `${odraws} draws`);
 
 // ---------- 2D drawers, mood, poke, settings, studio ----------
 for (const t of ['Us Checkup & Open Heart', 'The Velvet Arcade', 'Cuddle Corner', 'Sunday Safe Space', 'Until We Marry']) {
@@ -185,7 +193,7 @@ await B.eval(`document.querySelector('.sheet-bg').click(); 1`); await sleep(300)
 check('No Creator Studio button for Arushi', !(await A.eval(`!!document.querySelector('.dock button[title="Creator Update Studio"]')`)));
 await A.eval(`document.querySelector('.dock button[title="Settings"]').click(); 1`); await sleep(500); await shot(A, 'settings');
 await A.eval(`document.querySelector('.sheet-bg').click(); 1`); await sleep(300);
-const hud = await A.eval('document.querySelector(".debug")?.textContent');
+const hud = await A.eval('__us.renderer.info.render.calls + " draws, " + __us.fps + " fps"');
 check('No JS errors on either phone', !A.errors.length && !B.errors.length, [...A.errors, ...B.errors].slice(0, 3).join(' | '));
 
 // ---------- partner leaves ----------

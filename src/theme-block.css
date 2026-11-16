@@ -140,10 +140,6 @@ canvas.scratch { border-radius: 0; }
 .stage .small { background: rgba(26, 16, 24, 0.85); padding: 1px 5px; box-shadow: 0 0 0 2px var(--ink); white-space: nowrap; }
 .badge { width: auto; } .badge span { white-space: nowrap; }
 
-/* couple actions: bottom centre, between the joystick and the action buttons */
-.couplebar { left: calc(env(safe-area-inset-left) + 166px); right: calc(var(--rail) + 196px); bottom: 14px; display: flex; justify-content: center; align-items: flex-end; }
-.couplebar .couple { max-width: 100%; }
-
 /* passcode screen: fits short landscape phones, scrolls if it still doesn't */
 .pair { overflow-y: auto; touch-action: pan-y; padding: 12px; }
 .pair > .glass { margin: auto; padding: 16px 20px !important; gap: 9px; }
@@ -164,3 +160,96 @@ body, .countdown, .rotate { background: var(--love-bg); background-color: #3a103
   background: url(./ui-tex/rose.png) 0 0 / 36px 36px, #ec6296; box-shadow: 0 0 0 3px var(--ink), var(--bevel), 0 8px 24px -6px #ff3e8a;
   text-shadow: 2px 2px 0 var(--ink); animation: momentPop 0.45s cubic-bezier(.2, 1.6, .4, 1) both; }
 @keyframes momentPop { from { opacity: 0; scale: 0.4; } to { opacity: 1; scale: 1; } }
+
+/* ================= expansion HUD: hotbar, inventory, emote wheel, stations ================= */
+.hud.badge { pointer-events: none; }
+.badge.left { left: calc(env(safe-area-inset-left) + 12px); top: calc(env(safe-area-inset-top) + 62px); }
+.badge.right { right: calc(var(--rail) + 12px); top: 38%; }
+@media (max-height: 420px) { .badge .ring { width: 50px; height: 50px; } .badge img { inset: 3px; width: 44px; height: 44px; } .badge span { margin-top: 10px; font-size: 9px; } }
+
+/* Minecraft-style slots */
+.slot { position: relative; width: var(--slot, 44px); height: var(--slot, 44px); display: grid; place-items: center; flex: none; padding: 0;
+  background: #8b8b8b; box-shadow: inset 3px 3px 0 #373737, inset -3px -3px 0 #ffffff55, 0 0 0 2px var(--ink); color: #fff; font-family: var(--sans); }
+.slot .ico { font-style: normal; font-size: calc(var(--slot, 44px) * 0.52); line-height: 1; filter: drop-shadow(2px 2px 0 rgba(0,0,0,.35)); }
+.slot .n { position: absolute; right: 3px; bottom: 1px; font: 700 12px var(--serif); text-shadow: 2px 2px 0 #3f3f3f; }
+.slot .k { position: absolute; left: 3px; top: 1px; font: 9px var(--serif); opacity: 0.55; }
+.slot .tier { position: absolute; left: 4px; bottom: 4px; width: 7px; height: 7px; box-shadow: 0 0 0 1px var(--ink); }
+.slot.on { box-shadow: inset 3px 3px 0 #373737, inset -3px -3px 0 #ffffff55, 0 0 0 2px var(--ink), 0 0 0 5px #fff, 0 0 0 7px var(--ink); z-index: 1; }
+.slot.empty { opacity: 0.55; } .slot.empty .ico { filter: grayscale(1) opacity(.5); }
+.slot.short { background: #a35a5a; } .slot.ready { background: #8fa68b; } .slot.have { background: #9a9ab8; }
+.slot.big { --slot: 56px; } .slot.sm { --slot: 34px; }
+.slot.gift { background: #d97aa0; }
+.hotbar { left: calc((100vw - var(--rail) - 26px) / 2 + 12px); transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 8px); display: flex; gap: 3px; padding: 4px;
+  --slot: clamp(28px, calc((100vw - 478px) / 8), 46px); background: rgba(26, 16, 24, 0.55); box-shadow: 0 0 0 2px var(--ink); }
+.hotbar .slot { transition: transform 0.12s; touch-action: none; }
+.hotbar .slot.on { transform: translateY(-3px); }
+.hotbar .dots { font: 700 calc(var(--slot) * 0.5) var(--serif); background: url(./ui-tex/rose.png) 0 0 / 36px 36px, #ec6296; letter-spacing: -0.05em; }
+.wheel-bg { position: fixed; inset: 0; z-index: 75; background: rgba(10, 6, 12, 0.35); touch-action: none; }
+.wheel { position: absolute; width: 0; height: 0; }
+.wheel .slot { position: absolute; transform: translate(-50%, -50%); --slot: 50px; transition: transform 0.1s; }
+.wheel .slot.on { transform: translate(-50%, -50%) scale(1.15); }
+.wheel-c { position: absolute; transform: translate(-50%, -50%); white-space: nowrap; font: 700 12px var(--serif); padding: 6px 10px; background: rgba(26, 16, 24, 0.9); box-shadow: 0 0 0 2px var(--ink); }
+
+/* inventory */
+.panel.inventory, .panel.wide { width: min(760px, 95vw); }
+/* centred without a CSS transform (framer-motion owns the transform for its spring) */
+.panel { padding: 14px 16px; left: 0; right: 0; top: 0; bottom: 0; margin: auto; height: fit-content; transform: none; }
+.inv-top { gap: 8px; margin-bottom: 6px; } .tabs-row { gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.slotgrid { display: grid; grid-template-columns: repeat(auto-fill, var(--slot, 42px)); gap: 4px; --slot: 42px; margin: 6px 0; }
+.inv-detail { gap: 10px; padding: 8px; margin-top: 6px; background: rgba(26, 16, 24, 0.55); box-shadow: 0 0 0 2px var(--ink); flex-wrap: wrap; }
+.pips { display: inline-flex; gap: 3px; align-items: center; } .pips i { width: 12px; height: 8px; box-shadow: 0 0 0 1px var(--ink); } .pips small { margin-left: 4px; }
+.closex { float: right; position: relative; z-index: 2; }
+
+/* emote button (left) + fan of couple actions */
+.emote { left: calc(env(safe-area-inset-left) + 34px); bottom: 162px; width: 50px; height: 50px; display: grid; place-items: center; font-size: 24px;
+  background: url(./ui-tex/rose.png) 0 0 / 36px 36px, #ec6296; box-shadow: var(--edge), var(--bevel); z-index: 22; }
+.emote::after { content: ''; position: absolute; left: 3px; right: 3px; bottom: -9px; height: 5px; background: linear-gradient(90deg, #ff4f93 var(--love, 0%), #241a26 0); box-shadow: 0 0 0 2px var(--ink); }
+.emote.near { animation: emotePulse 1.6s ease-in-out infinite; }
+.emote.on { box-shadow: var(--edge), var(--bevel-in); }
+@keyframes emotePulse { 50% { filter: brightness(1.18); transform: scale(1.04); } }
+.emote-bg { position: fixed; inset: 0; z-index: 21; }
+.emote-fan { left: calc(env(safe-area-inset-left) + 59px); bottom: 187px; width: 0; height: 0; z-index: 23; }
+.emote-fan::before { content: ''; position: absolute; left: 36px; top: -70px; width: 262px; height: 136px; background: rgba(26, 16, 24, 0.55); box-shadow: 0 0 0 2px var(--ink); }
+.emo { position: absolute; left: -29px; top: -29px; width: 58px; height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+  color: #fff; background: url(./ui-tex/stone.png) 0 0 / 48px 48px, #706c78; box-shadow: var(--edge), var(--bevel); font-family: var(--sans); }
+.emo b { font-size: 24px; line-height: 1.05; } .emo small { font-size: 9.5px; font-weight: 700; text-shadow: 1px 1px 0 #000; white-space: nowrap; }
+.emo.on { background: url(./ui-tex/rose.png) 0 0 / 36px 36px, #ec6296; } .emo.off { filter: grayscale(0.85) brightness(0.7); }
+.emote-hint { position: absolute; left: 36px; top: 72px; white-space: nowrap; font: 700 12px var(--sans); padding: 4px 8px; background: rgba(26, 16, 24, 0.88); box-shadow: 0 0 0 2px var(--ink); }
+
+/* soothing biome title + partner compass */
+.biome-banner { position: fixed; left: 0; right: 0; top: 21%; z-index: 13; pointer-events: none; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.biome-banner b { font: 700 clamp(17px, 2.6vw, 23px) var(--sans); letter-spacing: 0.08em; color: #fff; text-shadow: 0 0 16px rgba(255, 170, 215, 0.95), 2px 2px 0 rgba(26, 16, 24, 0.55); }
+.biome-banner small { font: 12px var(--serif); text-transform: uppercase; color: #fff6ec; opacity: 0.8; text-shadow: 2px 2px 0 rgba(26,16,24,.5); }
+.compass { position: fixed; left: 50%; top: 50%; z-index: 12; pointer-events: none; transition: transform 0.25s ease-out; }
+.compass span { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 34px; height: 34px; font: 700 15px var(--serif); color: #fff;
+  background: url(./ui-tex/rose.png) 0 0 / 36px 36px, #ec6296; box-shadow: var(--edge), 0 0 14px #ff7db5; transition: transform 0.25s ease-out; }
+.compass small { font-size: 8px; line-height: 1; }
+.solo-tag { left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top) + 64px); display: flex; gap: 8px; align-items: center; pointer-events: auto; }
+.solo-tag .pill { padding: 3px 8px; font-size: 11px; }
+.love { gap: 4px; }
+
+/* craft together prompt */
+.ct { position: fixed; left: 0; right: 0; top: 0; bottom: 0; margin: auto; width: fit-content; height: fit-content; z-index: 85; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 22px; text-align: center;
+  background: url(./ui-tex/slate.png) 0 0 / 48px 48px, #34283a; box-shadow: var(--edge), var(--bevel), 0 0 60px -10px #ff3e8a; }
+.ct-heart { position: relative; width: 88px; height: 88px; font-size: 46px; display: grid; place-items: center; background: url(./ui-tex/rose.png) 0 0 / 36px 36px, #ec6296; box-shadow: var(--edge), var(--bevel); animation: emotePulse 0.5s ease-in-out infinite; }
+.ct-heart.on { animation: none; filter: brightness(1.25); box-shadow: var(--edge), var(--bevel-in), 0 0 30px #fff; }
+.ct-heart i { position: absolute; left: 0; bottom: -10px; height: 5px; width: 100%; background: #ffd166; transform-origin: left; animation: ctShrink linear forwards; box-shadow: 0 0 0 2px var(--ink); }
+@keyframes ctShrink { to { transform: scaleX(0); } }
+
+/* stations */
+.station-body { align-items: flex-start; gap: 14px; flex-wrap: wrap; }
+.recipes { grid-template-columns: repeat(5, 44px); --slot: 44px; flex: none; }
+.recipe { min-width: 250px; gap: 8px; }
+.craftgrid { gap: 10px; align-items: center; } .grid9 { display: grid; grid-template-columns: repeat(3, 40px); gap: 3px; --slot: 40px; }
+.craftgrid .arrow { font-size: 26px; color: #fff6ec; text-shadow: 2px 2px 0 var(--ink); }
+.furnace { position: relative; height: 22px; background: #241a26; box-shadow: 0 0 0 2px var(--ink), var(--bevel-in); }
+.furnace i { position: absolute; left: 0; top: 0; bottom: 0; background: repeating-linear-gradient(90deg, #ff9a4a 0 10px, #ffc27a 10px 12px); }
+.furnace span { position: relative; font-size: 12px; padding-left: 6px; line-height: 22px; text-shadow: 1px 1px 0 #000; }
+.together.live { animation: emotePulse 1.4s ease-in-out infinite; background: url(./ui-tex/rose.png) 0 0 / 48px 48px, #ec6296; }
+.anvil-row { gap: 10px; padding: 6px; background: rgba(26, 16, 24, 0.4); box-shadow: 0 0 0 2px var(--ink); flex-wrap: wrap; }
+.quest { gap: 10px; padding: 6px 8px; background: rgba(26, 16, 24, 0.45); box-shadow: 0 0 0 2px var(--ink); }
+.qbar { width: 100%; height: 10px; }
+.swatch { width: 38px; height: 38px; box-shadow: 0 0 0 2px var(--ink), var(--bevel); }
+.swatch.on { box-shadow: 0 0 0 2px var(--ink), 0 0 0 5px #fff; }
+.lore p { max-width: 460px; font-size: 15px; line-height: 1.5; margin: 4px 0 8px; }
+.popup i { font-style: normal; }

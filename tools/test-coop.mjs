@@ -40,8 +40,9 @@ await sleep(2500);
 await A.shot(`${OUT}/06-house-exterior.png`);
 await sleep(4500);
 await A.shot(`${OUT}/07-full-love.png`);
-console.log('A couple buttons:', await A.eval('document.querySelectorAll(".couple button").length'));
-await A.eval(`[...document.querySelectorAll('.couple button')][0].click(); 1`);
+await A.eval(`document.querySelector('.emote').click(); 1`); await sleep(500);
+console.log('A emote actions enabled:', await A.eval('document.querySelectorAll(".emote-fan .emo:not(.off)").length'));
+await A.eval(`document.querySelectorAll('.emote-fan .emo')[0].click(); 1`);
 await sleep(700);
 await B.shot(`${OUT}/08-kiss-seen-by-shaurya.png`);
 // enter the house (black fade, overworld disposed)

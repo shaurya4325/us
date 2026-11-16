@@ -1,3 +1,4 @@
+import { holdDuck } from '../../audio/BiomeAudioManager';
 import { motion, useAnimationControls } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { COUPONS, NEEDS, TONES } from '../../config/content';
@@ -16,7 +17,7 @@ export const ago = (t: number) => {
 export function VoicePlay({ id }: { id: string }) {
   const { base } = useVelvet();
   const [src, setSrc] = useState<string | null>(null);
-  return src ? <audio controls autoPlay src={src} /> : <Tap className="pill" onClick={async () => setSrc((await getDoc(`${base}/blobs/${id}`))?.data ?? null)}>▶︎ Play voice note</Tap>;
+  return src ? <audio controls autoPlay src={src} onPlay={() => holdDuck(true)} onPause={() => holdDuck(false)} onEnded={() => holdDuck(false)} /> : <Tap className="pill" onClick={async () => setSrc((await getDoc(`${base}/blobs/${id}`))?.data ?? null)}>▶︎ Play voice note</Tap>;
 }
 
 const Toggle = ({ on, label, set }: { on: boolean; label: string; set: (v: boolean) => void }) => <Tap className={'pill' + (on ? ' on' : '')} onClick={() => set(!on)}>{label}</Tap>;

@@ -1,0 +1,15 @@
+Music — Kevin MacLeod (incompetech.com), licensed under Creative Commons: By Attribution 4.0
+  prairie.mp3   "Almost Bliss"
+  sakura.mp3    "Ishikari Lore"
+  azure.mp3     "Floating Cities"
+  starlight.mp3 "Dream Culture"
+  lagoon.mp3    "Clean Soul"
+  home.mp3      "Calmant"
+  night.mp3     "Healing"
+
+Sound effects — CC0 (public domain)
+  sfx/rpg     Kenney "RPG Audio"        (kenney.nl)
+  sfx/impact  Kenney "Impact Sounds"    (kenney.nl)
+  sfx/ui      Kenney "Interface Sounds" (kenney.nl)
+  sfx/water   "Water Splash & Slime SFX" (opengameart.org)
+  sfx/kiss    recorded kiss sounds (from our love site)

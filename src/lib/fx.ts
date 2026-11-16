@@ -1,37 +1,23 @@
-// Sound (Web Audio synth), haptics (Capacitor or navigator.vibrate) and notifications.
+// UI sounds (real samples via the SoundEffectsManager), haptics (Capacitor or navigator.vibrate) and notifications.
 import { Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Preferences } from '@capacitor/preferences';
+import { playSfx } from '../audio/SoundEffectsManager';
 
 export const native = Capacitor.isNativePlatform();
-let ctx: AudioContext | null = null;
-let muted = (() => { try { return localStorage.getItem('vu:mute') === '1'; } catch { return false; } })();
+const ls = (k: string, d: string) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } };
+let muted = ls('vu:mute', '0') === '1';
+let music = Number(ls('vu:music', '0.8'));
 export const isMuted = () => muted;
 export const setMuted = (m: boolean) => { muted = m; try { localStorage.setItem('vu:mute', m ? '1' : '0'); } catch { /* */ } };
-
-function tone(freq: number, dur: number, type: OscillatorType = 'sine', vol = 0.12, delay = 0, slide = 0) {
-  if (muted) return;
-  ctx ??= new AudioContext();
-  const t = ctx.currentTime + delay, o = ctx.createOscillator(), g = ctx.createGain();
-  o.type = type; o.frequency.setValueAtTime(freq, t);
-  if (slide) o.frequency.exponentialRampToValueAtTime(freq * slide, t + dur);
-  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(g).connect(ctx.destination); o.start(t); o.stop(t + dur + 0.02);
-}
+/** soundtrack level 0..1 (0 = off) */
+export const musicLevel = () => (Number.isFinite(music) ? music : 0.8);
+export const setMusicLevel = (v: number) => { music = v; try { localStorage.setItem('vu:music', String(v)); } catch { /* */ } };
 
 export type Sfx = 'pop' | 'squeak' | 'shimmer' | 'heartbeat' | 'chime' | 'flare' | 'tap';
-export function sfx(s: Sfx) {
-  try {
-    if (s === 'pop') tone(520, 0.09, 'sine', 0.14, 0, 1.8);
-    if (s === 'tap') tone(880, 0.05, 'triangle', 0.06);
-    if (s === 'squeak') { tone(900, 0.12, 'sine', 0.1, 0, 1.6); tone(1300, 0.1, 'sine', 0.08, 0.1, 0.7); }
-    if (s === 'shimmer') [1047, 1319, 1568, 2093].forEach((f, i) => tone(f, 0.35, 'sine', 0.05, i * 0.06));
-    if (s === 'heartbeat') { tone(70, 0.14, 'sine', 0.3); tone(62, 0.16, 'sine', 0.24, 0.2); }
-    if (s === 'chime') [784, 1175].forEach((f, i) => tone(f, 0.6, 'sine', 0.08, i * 0.14));
-    if (s === 'flare') [659, 880, 659, 880].forEach((f, i) => tone(f, 0.22, 'triangle', 0.1, i * 0.18));
-  } catch { /* audio blocked until first gesture */ }
-}
+const SFX_MAP: Record<Sfx, string> = { pop: 'pop', tap: 'click', squeak: 'squeak', shimmer: 'shimmer', heartbeat: 'heartbeat', chime: 'notify', flare: 'flare' };
+export function sfx(s: Sfx) { if (!muted) playSfx(SFX_MAP[s]); }
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /** pattern: alternating vibrate/pause ms */

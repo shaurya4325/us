@@ -1,29 +1,21 @@
-// Everything buildable, craftable and adoptable in the world. Costs are shared between both players.
-export type Res = 'wood' | 'stone' | 'crystal' | 'flower' | 'fish' | 'bug';
-export type Cost = Partial<Record<Res, number>>;
-export const RES_ICON: Record<Res, string> = { wood: '🪵', stone: '🪨', crystal: '💎', flower: '🌼', fish: '🐟', bug: '🦋' };
+// House rooms, pets and couple-action text. Items, tools and costs live in src/data/items.ts (re-exported here).
+import type { Cost } from '../data/items';
+export { ITEMS, TOOLS, TOOL_ORDER, TIERS, item, canAfford, costText, negate, together, GIFTABLE, type ToolId, type ItemId, type Cost } from '../data/items';
 
-export type ToolId = 'hatchet' | 'pickaxe' | 'can' | 'net' | 'rod';
-export const TOOLS: Record<ToolId, { name: string; icon: string; cost: Cost; does: string }> = {
-  hatchet: { name: 'Rose-Gold Hatchet', icon: '🪓', cost: { wood: 3, stone: 2 }, does: 'Chop trees 2× faster' },
-  pickaxe: { name: 'Starlight Pickaxe', icon: '⛏️', cost: { wood: 4, stone: 3 }, does: 'Mine stone fast, unlocks rose-crystals' },
-  can: { name: 'Meadow Watering Can & Trowel', icon: '🪴', cost: { wood: 3, flower: 2 }, does: 'Plant saplings and flowers' },
-  net: { name: 'Butterfly Net', icon: '🥅', cost: { wood: 4, flower: 3 }, does: 'Catch butterflies and fireflies' },
-  rod: { name: 'Bamboo Fishing Rod', icon: '🎣', cost: { wood: 5, bug: 1 }, does: 'Fish koi from the pond' },
-};
-
-export type RoomType = 'bedroom' | 'kitchen' | 'greenhouse' | 'pool' | 'cinema' | 'observatory' | 'cuddle' | 'nursery' | 'gallery' | 'rooftop';
+export type RoomType = 'bedroom' | 'kitchen' | 'greenhouse' | 'pool' | 'cinema' | 'observatory' | 'cuddle' | 'nursery' | 'gallery' | 'rooftop' | 'living' | 'music';
 export const ROOMS: Record<RoomType, { name: string; icon: string; cost: Cost; floor: number; wall: number; blurb: string }> = {
-  bedroom: { name: 'Cozy Starter Bedroom', icon: '🛏️', cost: { wood: 8, stone: 5 }, floor: 0xc99a7a, wall: 0xf3d6dc, blurb: 'Canopy bed, fairy lights, plushie shelf, wardrobe mirror' },
-  kitchen: { name: "Couple's Kitchen & Bakery", icon: '🍰', cost: { wood: 12, stone: 8, flower: 2 }, floor: 0xe8d2b8, wall: 0xfde7d2, blurb: 'Cook momos, cocoa, strawberry cake and ramen together' },
-  greenhouse: { name: 'Botanical Glass Greenhouse', icon: '🌿', cost: { wood: 10, stone: 6, flower: 6 }, floor: 0x9fc98a, wall: 0xd8f3e4, blurb: 'Glass roof, flower beds, hanging vines, swinging loveseat' },
-  pool: { name: 'Glass-Roof Pool & Spa', icon: '🏊', cost: { wood: 10, stone: 14, crystal: 2 }, floor: 0xdfeef0, wall: 0xcdeef2, blurb: 'Turquoise pool, heart floaties, steamy jacuzzi' },
-  cinema: { name: 'Velvet Cinema & Arcade Den', icon: '🎬', cost: { wood: 14, stone: 6, crystal: 2 }, floor: 0x4a1d33, wall: 0x6b2547, blurb: 'Projector screen, beanbags, popcorn, two-player table' },
-  observatory: { name: 'Stargazing Observatory & Studio', icon: '🔭', cost: { wood: 12, stone: 10, crystal: 4 }, floor: 0x37406b, wall: 0x2b3256, blurb: 'Glass dome, brass telescope, piano, vinyl player' },
-  cuddle: { name: 'Cuddle Corner Sanctuary', icon: '🧸', cost: { wood: 8, flower: 4, bug: 2 }, floor: 0xf7c9da, wall: 0xffe3ee, blurb: 'Pillow fort and squishy Kuro, Mochi & Coco' },
+  bedroom: { name: 'Stargazing Bedroom', icon: '🛏️', cost: { wood: 8, stone: 5 }, floor: 0xc99a7a, wall: 0xf3d6dc, blurb: 'Canopy bed, fairy lights, plushie shelf, wardrobe mirror' },
+  living: { name: 'Cozy Living Room', icon: '🛋️', cost: { wood: 10, stone: 6, silk: 2 }, floor: 0xd9b38c, wall: 0xfbe4d8, blurb: 'Big squishy sofa, fireplace, blanket basket, board games' },
+  kitchen: { name: 'Dream Kitchen', icon: '🍰', cost: { wood: 12, stone: 8, flower: 2 }, floor: 0xe8d2b8, wall: 0xfde7d2, blurb: 'A kitchen hearth for treats, a table for two' },
+  greenhouse: { name: 'Glass Sakura Conservatory', icon: '🌸', cost: { wood: 10, stone: 6, flower: 6 }, floor: 0x9fc98a, wall: 0xd8f3e4, blurb: 'Glass roof, flower beds, a sakura sapling, loveseat swing' },
+  cuddle: { name: 'Plushie Loft', icon: '🧸', cost: { wood: 8, flower: 4, bug: 2 }, floor: 0xf7c9da, wall: 0xffe3ee, blurb: 'Pillow fort and squishy Kuro, Mochi & Coco' },
   nursery: { name: 'Pet Nursery & Playroom', icon: '🐾', cost: { wood: 10, stone: 4, fish: 2 }, floor: 0xf1dfb0, wall: 0xfff2cf, blurb: 'Pet beds, treat bowls, toy tunnel, grooming station' },
-  gallery: { name: '"Until We Marry" Memory Gallery', icon: '🖼️', cost: { wood: 10, stone: 8, crystal: 3 }, floor: 0xd9c2a5, wall: 0xf4e8dc, blurb: 'Framed photos, milestone trophies, wishlist wall' },
-  rooftop: { name: 'Secret Rooftop Hideout', icon: '🏮', cost: { wood: 14, stone: 6, crystal: 3, flower: 3 }, floor: 0xa9744f, wall: 0x8a5a3c, blurb: 'Lantern deck, hammock, wish jar' },
+  pool: { name: 'Indoor Heated Swimming Pool', icon: '🏊', cost: { stone: 12, brick: 4, seaGlass: 3, pearl: 1 }, floor: 0xdfeef0, wall: 0xcdeef2, blurb: 'Warm turquoise pool, heart floaties, steamy jacuzzi' },
+  cinema: { name: 'Private Mini-Cinema', icon: '🎬', cost: { wood: 10, silk: 3, crystal: 2 }, floor: 0x4a1d33, wall: 0x6b2547, blurb: 'Projector screen, beanbags, popcorn, two-player arcade' },
+  observatory: { name: 'Stargazing Observatory', icon: '🔭', cost: { azureWood: 8, moonstone: 2, crystal: 2 }, floor: 0x37406b, wall: 0x2b3256, blurb: 'Glass dome, brass telescope, piano, vinyl player' },
+  music: { name: 'Acoustic Music Corner', icon: '🎸', cost: { sakuraWood: 6, azureWood: 4, sap: 2 }, floor: 0xb98a63, wall: 0xf1dcf2, blurb: 'Guitar, ukulele, record crate, a piano by the window' },
+  gallery: { name: 'Our Photo Memory Gallery', icon: '🖼️', cost: { wood: 10, stone: 8, crystal: 3 }, floor: 0xd9c2a5, wall: 0xf4e8dc, blurb: 'Framed photos, milestone trophies, wishlist wall' },
+  rooftop: { name: 'Secret Rooftop Hideout', icon: '🏮', cost: { wood: 12, sakuraWood: 4, shard: 2 }, floor: 0xa9744f, wall: 0x8a5a3c, blurb: 'Lantern deck, hammock, wish jar' },
 };
 
 export type Side = 'right' | 'left' | 'back' | 'front' | 'up';
@@ -42,16 +34,10 @@ export const PETS: Record<PetId, { name: string; icon: string; cost: Cost; body:
 };
 
 export const CABLE_COST: Cost = { wood: 6, stone: 3 };
-export const DISHES = [
-  { id: 'momos', name: 'Momos', icon: '🥟' }, { id: 'cocoa', name: 'Hot Cocoa', icon: '☕' },
-  { id: 'cake', name: 'Strawberry Cake', icon: '🍰' }, { id: 'ramen', name: 'Ramen', icon: '🍜' },
-];
 export const WHISPERS = [
   'psst… you look extra cute today', 'I would share my last momo with you (maybe)', 'guess who is my favourite person? 👀',
-  'you are so annoying… annoyingly adorable', 'race you to the pond, loser makes cocoa', 'I like you a normal amount (a lot)',
+  'you are so annoying… annoyingly adorable', 'race you to the lagoon, loser makes cocoa', 'I like you a normal amount (a lot)',
   'stop being so pretty, I cannot focus on chopping', 'you owe me one hug, collecting it now',
 ];
-
-export const canAfford = (inv: Record<string, number> | undefined, c: Cost) => Object.entries(c).every(([k, v]) => (inv?.[k] ?? 0) >= (v ?? 0));
-export const costText = (c: Cost) => Object.entries(c).map(([k, v]) => `${RES_ICON[k as Res]}${v}`).join(' ');
-export const negate = (c: Cost) => Object.fromEntries(Object.entries(c).map(([k, v]) => [`inv.${k}`, -(v ?? 0)]));
+/** wall & floor swatches for the Velvet Paintbrush */
+export const PAINTS = [0xf3d6dc, 0xffe3ee, 0xfde7d2, 0xd8f3e4, 0xcdeef2, 0xe6dcfa, 0xfff6e8, 0x6b2547, 0x2b3256, 0xc99a7a, 0x9fc98a, 0xb98a63];

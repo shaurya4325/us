@@ -3,7 +3,7 @@
 import { setDoc, watchDoc } from '../lib/sync';
 import type { Who } from '../config/people';
 
-export interface Snap { p: [number, number, number]; r: number; a: string; tl: string; s: 'over' | 'inside'; v: number; t: number }
+export interface Snap { p: [number, number, number]; r: number; a: string; tl: string; ti?: number; b?: number; s: 'over' | 'inside'; v: number; t: number }
 export interface Act { k: string; t: number; d?: any }
 type Msg = { snap?: Snap; act?: Act };
 

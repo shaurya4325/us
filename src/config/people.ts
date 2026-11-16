@@ -11,6 +11,6 @@ export const PEOPLE: Record<Who, { name: string; doc: string; initial: string; a
   },
 };
 /** outfit palettes the wardrobe mirror cycles through (synced) */
-export const CAPES = [0xe9b38f, 0xfff4f8, 0xff7db5, 0x9fd8ff, 0xb9a3e8, 0xffd27a];
+export const CAPES = [0xe9b38f, 0xfff4f8, 0xff7db5, 0x9fd8ff, 0xb9a3e8, 0xffd27a, 0xffe9a0, 0xffb7d0];   // 6, 7: Love Star shop
 export const other = (w: Who): Who => (w === 'shaurya' ? 'arushi' : 'shaurya');
 export const nameOf = (w?: string) => (w === 'shaurya' || w === 'arushi' ? PEOPLE[w].name : 'Someone');

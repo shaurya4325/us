@@ -92,7 +92,7 @@ function Home({ onLeave }: { onLeave: () => void }) {
       if (phase === 'world') toast(`🌙 ${PEOPLE[partner].name} left our world`, 'Everything is saved. The gate opens again when you are both here.');
     }
   }, [both, now, phase, states, me, partner, toast]);
-  useEffect(() => { if (phase === 'gate') music('sunset'); }, [phase]);
+  useEffect(() => { if (phase === 'gate') music('home'); }, [phase]);
   const bothRef = useRef(both); bothRef.current = both;
   const enterWorld = useCallback(() => setPhase(bothRef.current ? 'world' : 'gate'), []);
 

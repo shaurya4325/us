@@ -2,9 +2,11 @@
 // Static walls/floors/furniture for each floor are merged into a single draw call.
 import * as THREE from 'three';
 import { Kit, mat, basic, labelSprite, skyTexture, softDot, waterMaterial, disposeTree } from './gfx';
-import { ROOMS, type RoomCell, type RoomType } from './catalog';
+import { ROOMS, item, type RoomCell, type RoomType } from './catalog';
+import { addDecor } from './decor';
 import type { EngineAPI, Interactable, SceneAPI, WorldDoc } from './types';
 import type { Who } from '../config/people';
+import type { Surface } from '../data/biomes';
 
 const SP = 12, H = 4.5, LV = 3.4, WALL = 3, DOOR = 1.2;
 type Spot = { key: string; x: number; z: number; label: string; icon: string; r?: number };
@@ -108,6 +110,28 @@ const LAYOUT: Record<RoomType, (k: Kit, g: Kit) => Built> = {
         });
       } };
   },
+  living: (k, g) => {
+    k.box(3.2, 0.45, 1.1, 0xf5a3c7, 1.4, 0, -3.7).box(3.2, 0.95, 0.3, 0xe48fb4, 1.4, 0, -4.25).box(0.3, 0.7, 1.1, 0xe48fb4, -0.25, 0, -3.7).box(0.3, 0.7, 1.1, 0xe48fb4, 3.05, 0, -3.7)
+      .ball(0.28, 0xfff1f6, 0.6, 0.65, -3.9, 1.2, 0.8, 0.6).ball(0.28, 0xfff6d8, 2.2, 0.65, -3.9, 1.2, 0.8, 0.6)
+      .box(1.6, 0.4, 0.9, 0xc08a5e, 1.4, 0, -1.7).box(0.7, 0.04, 0.7, 0xfff0b0, 1.4, 0.41, -1.7)
+      .box(0.6, 1.7, 2.2, 0xd8cfc4, -4.15, 0, 0.6).box(0.5, 0.7, 1.1, 0x3a2f3a, -3.95, 0.15, 0.6).box(0.8, 0.12, 2.4, 0xece6f0, -4.05, 1.7, 0.6)
+      .cyl(0.45, 0.38, 0.5, 0xc9a26b, 3.7, 0, 2.2, 12).ball(0.3, 0xb6a6ff, 3.6, 0.55, 2.1, 1, 0.5, 1).ball(0.28, 0xffb3d4, 3.85, 0.6, 2.3, 1, 0.5, 1)
+      .cyl(1.6, 1.6, 0.02, 0xfff1f6, 1.4, 0, -1.4, 24);
+    g.add(new THREE.ConeGeometry(0.22, 0.45, 7), 0xffa64a, -3.9, 0.35, 0.6).ball(0.15, 0xffd27a, -3.9, 0.3, 0.3, 1, 0.8, 1, 0);
+    return { spots: [{ key: 'sofa', x: 1.4, z: -2.6, label: 'Cuddle on the sofa', icon: '🛋️' }, { key: 'fire', x: -3.2, z: 0.6, label: 'Warm up by the fire', icon: '🔥' }, { key: 'games', x: 1.4, z: -0.6, label: 'Board game night', icon: '🎲' }, { key: 'blanket', x: 3.0, z: 2.6, label: 'Grab a blanket', icon: '🧣' }],
+      cols: [[1.4, -3.8, 1.0], [1.4, -1.7, 0.7], [-4.1, 0.6, 1.0], [3.7, 2.2, 0.5]] };
+  },
+  music: (k, g) => {
+    k.box(1.9, 1.0, 0.7, 0x2b1a24, -3.6, 0, 1.2).box(1.7, 0.06, 0.32, 0xffffff, -3.6, 1.0, 1.45).box(0.5, 0.5, 0.4, 0x3a1630, -3.6, 0, 2.2)
+      .cyl(0.03, 0.03, 0.9, 0x8a5a3c, 2.6, 0, -3.6).add(new THREE.CylinderGeometry(0.32, 0.36, 0.12, 14), 0xd98a4a, 2.6, 0.85, -3.5, Math.PI / 2.3).box(0.12, 0.7, 0.06, 0x8a5a3c, 2.6, 1.15, -3.45, 0)
+      .cyl(0.03, 0.03, 0.7, 0x8a5a3c, 1.5, 0, -3.8).add(new THREE.CylinderGeometry(0.2, 0.22, 0.08, 12), 0xffb3d4, 1.5, 0.65, -3.7, Math.PI / 2.3)
+      .box(1.2, 0.6, 0.6, 0xa8744f, 3.4, 0, 1.6);
+    for (let i = 0; i < 6; i++) k.box(0.05, 0.5, 0.5, [0xff7db5, 0x9ad8ff, 0xfff07a, 0xb6a6ff][i % 4], 3.0 + i * 0.15, 0.6, 1.6);
+    k.cyl(1.2, 1.2, 0.02, 0xb6a6ff, 0.8, 0, -1.6, 24);
+    for (let i = 0; i < 8; i++) g.ball(0.05, 0xfff0b0, -3 + i * 0.9, 2.7, -4.35, 1, 1, 1, 0);
+    return { spots: [{ key: 'guitar', x: 2.2, z: -2.6, label: 'Strum the guitar', icon: '🎸' }, { key: 'piano', x: -3.6, z: 2.6, label: 'Play our song', icon: '🎹' }, { key: 'vinyl', x: 3.4, z: 2.6, label: 'Pick a record', icon: '💿' }],
+      cols: [[-3.6, 1.2, 1.0], [2.6, -3.6, 0.4], [1.5, -3.8, 0.3], [3.4, 1.6, 0.7]] };
+  },
   rooftop: (k, g) => {
     for (let i = 0; i < 6; i++) g.ball(0.22, [0xffb35c, 0xff7db5][i % 2], -3 + i * 1.4, 2.6, -4.2, 1, 1.3, 1, 1);
     k.cyl(0.06, 0.06, 1.6, 0x8a5a3c, 0, 0, -2.6).cyl(0.06, 0.06, 1.6, 0x8a5a3c, 3.4, 0, -2.6)
@@ -135,20 +159,22 @@ export class Interior implements SceneAPI {
   constructor(w: WorldDoc) {
     this.scene.background = skyTexture('#2b0f1f', '#4a1d33', '#170912');
     this.scene.add(this.levels[0], this.levels[1]);
+    this.world = w;
     this.build(w);
   }
 
   private build(w: WorldDoc) {
     this.levels.forEach((l) => { disposeTree(l); l.clear(); });
     const cells = Object.values(w.rooms ?? {}) as RoomCell[];
-    this.sig = JSON.stringify(Object.keys(w.rooms ?? {}).sort());
+    this.sig = this.sigOf(w);
     const at = (gx: number, gz: number, lv: number) => cells.find((c) => c.gx === gx && c.gz === gz && c.lv === lv);
     this.rooms = []; this.halls = [];
     const kits = [new Kit(), new Kit()], glows = [new Kit(), new Kit()];
     const front = cells.filter((c) => c.lv === 0 && c.gx === 0).sort((a, b) => b.gz - a.gz)[0] ?? cells[0];
     const sparkle: number[] = [];
     for (const c of cells) {
-      const ox = c.gx * SP, oz = c.gz * SP, oy = c.lv * LV, k = kits[c.lv], g = glows[c.lv], R = ROOMS[c.type];
+      const ox = c.gx * SP, oz = c.gz * SP, oy = c.lv * LV, k = kits[c.lv], g = glows[c.lv], paint = w.paint?.[c.id];
+      const R = { ...ROOMS[c.type], wall: paint?.wall ?? ROOMS[c.type].wall, floor: paint?.floor ?? ROOMS[c.type].floor };
       const hasUp = c.lv === 0 && !!at(c.gx, c.gz, 1);
       // floor (upper floors leave a hole above the stairs)
       if (c.lv === 1) { k.box(H * 2, 0.2, H * 2 - 1.6, R.floor, ox, oy - 0.2, oz + 0.8); k.box(H * 2 - 3.2, 0.2, 1.6, R.floor, ox + 1.6, oy - 0.2, oz - H + 0.8); }
@@ -183,6 +209,7 @@ export class Interior implements SceneAPI {
       this.rooms.push({ c, ox, oy, oz, b, hasUp });
       for (let i = 0; i < 6; i++) sparkle.push(ox - 4 + Math.random() * 8, oy + 1 + Math.random() * 2, oz - 4 + Math.random() * 8);
     }
+    for (const d of Object.values(w.decor ?? {})) if (d && d.s === 'inside') addDecor(kits[this.levelOf(d.y)], glows[this.levelOf(d.y)], d);
     for (const lv of [0, 1]) {
       if (kits[lv].parts.length) this.levels[lv].add(new THREE.Mesh(kits[lv].build(), mat()));
       if (glows[lv].parts.length) this.levels[lv].add(new THREE.Mesh(glows[lv].build(), basic(0xffffff, { vertexColors: true })));
@@ -210,8 +237,20 @@ export class Interior implements SceneAPI {
     this.halls.push({ x0, x1, z0, z1, y });
   }
 
+  private world: WorldDoc = {};
+  private sigOf(w: WorldDoc) { return JSON.stringify([Object.keys(w.rooms ?? {}).sort(), w.paint ?? {}, Object.entries(w.decor ?? {}).filter(([, d]) => d?.s === 'inside')]); }
   setWorld(w: WorldDoc) {
-    if (JSON.stringify(Object.keys(w.rooms ?? {}).sort()) !== this.sig) this.build(w);
+    this.world = w;
+    if (this.sigOf(w) !== this.sig) this.build(w);
+  }
+  /** the room the point is in (for the paintbrush) */
+  roomAt(x: number, z: number, y: number) {
+    return this.rooms.find((r) => Math.abs(x - r.ox) < H && Math.abs(z - r.oz) < H && Math.abs(y - r.oy) < 1.6)?.c ?? null;
+  }
+  surface(x: number, z: number, y: number): Surface {
+    if (this.inPool(x, z, y) && y < 0) return 'water';
+    const r = this.roomAt(x, z, y);
+    return r && ['cuddle', 'bedroom', 'living', 'cinema'].includes(r.type) ? 'carpet' : 'wood';
   }
 
   spawn(who: Who): [number, number, number] { return [this.exit[0] + (who === 'shaurya' ? -0.6 : 0.6), 0, this.exit[1] - 1.2]; }
@@ -243,20 +282,26 @@ export class Interior implements SceneAPI {
   levelOf(y: number) { return y > LV * 0.5 ? 1 : 0; }
 
   interactables(): Interactable[] {
-    const out: Interactable[] = [{ id: 'exit', x: this.exit[0], z: this.exit[1], r: 1.4, label: 'Exit to the meadow', icon: '🚪' }];
-    for (const r of this.rooms) for (const s of r.b.spots) out.push({ id: `${r.c.id}:${s.key}`, x: r.ox + s.x, z: r.oz + s.z, y: r.oy, r: s.r ?? 1.5, label: s.label, icon: s.icon });
+    const out: Interactable[] = [{ id: 'exit', x: this.exit[0], z: this.exit[1], r: 1.4, label: 'Exit to the meadow', icon: '🚪', hint: 'important' }];
+    for (const r of this.rooms) for (const s of r.b.spots) out.push({ id: `${r.c.id}:${s.key}`, x: r.ox + s.x, z: r.oz + s.z, y: r.oy, r: s.r ?? 1.5, label: s.label, icon: s.icon, hint: 'important' });
+    for (const [id, d] of Object.entries(this.world.decor ?? {})) if (d && d.s === 'inside') out.push({ id: 'decor:' + id, x: d.x, z: d.z, y: d.y, r: 0.9, label: `Pick up ${item(d.item).name}`, icon: item(d.item).icon });
     return out;
   }
 
   interact(id: string, E: EngineAPI) {
     if (id === 'exit') return E.exit();
+    if (id.startsWith('decor:')) {
+      const did = id.slice(6), d = this.world.decor?.[did]; if (!d) return;
+      E.sound('pop'); E.patch({ [`decor.${did}`]: null }, { [`inv.${d.item}`]: 1 }); E.toast(`${item(d.item).icon} Picked up`, 'It is back in the shared pouch');
+      return;
+    }
     const key = id.split(':')[1], p = E.player;
     const heart = () => E.fx('heart', p.x, p.y + 1.6, p.z, 10);
     switch (key) {
-      case 'bed': E.play('sit', 4); heart(); E.sound('hug'); E.ui('event', { type: 'room', text: 'is snuggled up in the canopy bed' }); break;
+      case 'bed': E.play('sit', 4); heart(); E.sound('hug'); E.ui('event', { type: 'room', text: 'is snuggled up in the canopy bed' }); E.ui('night', 30); break;
       case 'plush': case 'kuro': case 'mochi': case 'coco': E.play('hug', 1.5); E.sound('squeak'); heart(); E.ui('plush', key === 'plush' ? 'mochi' : key); break;
       case 'mirror': E.ui('outfit'); break;
-      case 'stove': E.ui('cook'); break;
+      case 'stove': E.sound('open'); E.ui('station', 'hearth'); break;
       case 'table': { const d = Object.entries(E.world.dishes ?? {}).filter(([, n]) => n > 0); E.play('sit', 3); E.toast('🍽️ Dinner for two', d.length ? d.map(([k, n]) => `${k} ×${n}`).join(' · ') : 'Cook something at the stove first'); heart(); break; }
       case 'fridge': E.sound('pop'); E.toast('🧃 Snack time', 'One strawberry milk for you, one for them'); break;
       case 'beds': E.play('pat', 1.2); E.fx('blossom', p.x, p.y + 0.6, p.z, 16); if (Math.random() < 0.5) E.give({ flower: 1 }, p.x, p.y + 1, p.z, 'greenhouse bloom'); else E.toast('🌷 Flowers watered'); break;
@@ -266,7 +311,7 @@ export class Interior implements SceneAPI {
       case 'screen': E.ui('movie'); break;
       case 'popcorn': E.sound('pop'); E.fx('gold', p.x, p.y + 1.2, p.z, 16); E.toast('🍿 Fresh popcorn', 'Extra butter, as always'); break;
       case 'arcade': E.ui('drawer', 'arcade'); break;
-      case 'telescope': E.ui('stars'); break;
+      case 'telescope': E.ui('stars'); E.ui('night', 40); break;
       case 'piano': E.ui('piano'); break;
       case 'vinyl': E.ui('music'); break;
       case 'fort': E.play('sit', 4); heart(); break;
@@ -274,7 +319,12 @@ export class Interior implements SceneAPI {
       case 'frames': E.ui('drawer', 'capsule'); break;
       case 'wishwall': case 'jar': E.ui('wish', key); break;
       case 'trophy': E.ui('trophy'); break;
-      case 'hammock': E.play('sit', 5); heart(); E.ui('event', { type: 'room', text: 'is in the rooftop hammock under the lanterns' }); break;
+      case 'hammock': E.play('sit', 5); heart(); E.ui('event', { type: 'room', text: 'is in the rooftop hammock under the lanterns' }); E.ui('night', 30); break;
+      case 'sofa': E.play('sit', 5); heart(); E.sound('squish'); E.ui('event', { type: 'room', text: 'is on the living-room sofa, saving you a spot' }); break;
+      case 'fire': E.play('sit', 3); E.fx('gold', p.x - 0.6, p.y + 0.6, p.z, 14); E.sound('sizzle'); E.toast('🔥 Toasty', 'The fireplace crackles softly'); break;
+      case 'games': E.ui('drawer', 'arcade'); break;
+      case 'blanket': E.play('hug', 1.5); E.sound('squish'); heart(); E.toast('🧣 Cozy blanket', 'Big enough for two'); break;
+      case 'guitar': E.play('wave', 1.6); [60, 64, 67, 72, 67, 64].forEach((n, i) => setTimeout(() => E.sound('harp', { rate: 2 ** ((n - 72) / 12) }), i * 160)); E.fx('heart', p.x, p.y + 1.6, p.z, 6); break;
     }
   }
 

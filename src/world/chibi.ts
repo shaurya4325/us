@@ -6,23 +6,29 @@ import type { ToolId } from './catalog';
 
 export type Anim = 'idle' | 'walk' | 'jump' | 'swing' | 'hug' | 'kiss' | 'dance' | 'pat' | 'patted' | 'whisper' | 'listen' | 'hands' | 'sit' | 'swim' | 'wave' | 'cast';
 
-const toolGeo = (id: ToolId | 'none') => {
+const toolGeo = (id: ToolId | 'none', head: number) => {
   const k = new Kit();
-  if (id === 'hatchet') k.cyl(0.03, 0.03, 0.5, 0x9a6a46, 0, -0.1).box(0.2, 0.14, 0.04, 0xf2b8a0, 0.08, 0.3);
-  else if (id === 'pickaxe') k.cyl(0.03, 0.03, 0.52, 0x7d5a3c, 0, -0.1).add(new THREE.TorusGeometry(0.2, 0.035, 5, 10, Math.PI), 0xd9e4ff, 0, 0.38, 0);
+  if (id === 'hatchet') k.cyl(0.03, 0.03, 0.5, 0x9a6a46, 0, -0.1).box(0.2, 0.14, 0.04, head, 0.08, 0.3);
+  else if (id === 'pickaxe') k.cyl(0.03, 0.03, 0.52, 0x7d5a3c, 0, -0.1).add(new THREE.TorusGeometry(0.2, 0.035, 5, 10, Math.PI), head, 0, 0.38, 0);
+  else if (id === 'sickle') k.cyl(0.03, 0.03, 0.34, 0x9a6a46, 0, -0.1).add(new THREE.TorusGeometry(0.15, 0.025, 4, 10, Math.PI * 1.2), head, 0.12, 0.28, 0, 0, 0, -0.4);
+  else if (id === 'hammer') k.cyl(0.03, 0.03, 0.46, 0x9a6a46, 0, -0.1).box(0.24, 0.12, 0.12, 0xb7b0c8, 0, 0.32, 0).box(0.06, 0.13, 0.13, 0xffd27a, 0.1, 0.32, 0);
+  else if (id === 'brush') k.cyl(0.022, 0.026, 0.46, 0xfff1f6, 0, -0.1).cyl(0.035, 0.03, 0.08, 0xffd27a, 0, 0.36).ball(0.05, 0xff3e8a, 0, 0.47, 0, 0.9, 1.6, 0.9);
   else if (id === 'can') k.cyl(0.11, 0.13, 0.2, 0x8fd3c9, 0, -0.08).cyl(0.02, 0.025, 0.22, 0x8fd3c9, 0.14, 0.02);
   else if (id === 'net') k.cyl(0.025, 0.025, 0.7, 0xc9a26b, 0, -0.1).add(new THREE.TorusGeometry(0.16, 0.02, 5, 12), 0xffffff, 0, 0.66, 0, Math.PI / 2);
   else if (id === 'rod') k.cyl(0.02, 0.03, 0.95, 0x9dc46a, 0, -0.1).ball(0.04, 0xff3e8a, 0, 0.86, 0);
   else return null;
   return k.build();
 };
+const TIER_HEAD = [0xc9a27e, 0xe4def0, 0x9fd8ff, 0xf2b8a0, 0xfff0a0];
 
 export class Chibi {
   root = new THREE.Group();
   private hips = new THREE.Group(); private head = new THREE.Group();
   private armL = new THREE.Group(); private armR = new THREE.Group(); private legL = new THREE.Group(); private legR = new THREE.Group();
   private cape = new THREE.Group(); private toolHold = new THREE.Group(); private capeMesh: THREE.Mesh;
-  private toolMesh: THREE.Mesh | null = null; private tool: ToolId | 'none' = 'none';
+  private toolMesh: THREE.Mesh | null = null; private tool: string = 'none'; private lastSign = 0;
+  /** true for one frame each time a foot touches down (footstep sounds follow the walk cycle) */
+  stepTick = false;
   label: THREE.Sprite; private m = mat(); private t = 0; private swingT = 0;
   anim: Anim = 'idle'; animT = 0; speed = 0; handSide: 'L' | 'R' = 'R';
 
@@ -78,15 +84,17 @@ export class Chibi {
     for (let i = 0; i < col.count; i++) col.setXYZ(i, k.r, k.g, k.b);
     col.needsUpdate = true;
   }
-  setTool(id: ToolId | 'none') {
-    if (id === this.tool) return;
-    this.tool = id;
+  setTool(id: ToolId | 'none', tier = 0) {
+    const key = id + tier;
+    if (key === this.tool) return;
+    this.tool = key;
     if (this.toolMesh) { this.toolHold.remove(this.toolMesh); this.toolMesh.geometry.dispose(); this.toolMesh = null; }
-    const g = toolGeo(id);
+    const g = toolGeo(id, id === 'hatchet' && tier === 0 ? 0xf2b8a0 : id === 'pickaxe' && tier === 0 ? 0xd9e4ff : TIER_HEAD[Math.min(4, tier)]);
     if (g) { this.toolMesh = new THREE.Mesh(g, this.m); this.toolHold.add(this.toolMesh); }
   }
   play(a: Anim) { if (a !== this.anim) { this.anim = a; this.animT = 0; } }
-  swing() { this.swingT = 0.32; }
+  swing(speed = 1) { this.swingT = 0.32 / speed; this.swingLen = this.swingT; }
+  private swingLen = 0.32;
 
   /** procedural animation; speed = ground speed (units/s) */
   update(dt: number, airborne: boolean) {
@@ -96,7 +104,10 @@ export class Chibi {
     let bob = 0, legA = 0, armA = 0, armRA = 0, armLz = 0, armRz = 0, headTilt = 0, lean = 0, spin = 0, headYaw = 0, headDown = 0, squish = 1, sway = 0;
     if (airborne) { legA = 0.5; armA = -2.4; }
     else if (a === 'swim') { bob = -0.35 + Math.sin(t * 3) * 0.05; armA = Math.sin(t * 5) * 1.6; legA = Math.sin(t * 6) * 0.5; }
-    else if (moving || a === 'walk') { bob = Math.abs(Math.sin(ph)) * 0.07; legA = Math.sin(ph) * 0.75; armA = -Math.sin(ph) * 0.65; lean = 0.08; }
+    else if (moving || a === 'walk') {
+      bob = Math.abs(Math.sin(ph)) * 0.07; legA = Math.sin(ph) * 0.75; armA = -Math.sin(ph) * 0.65; lean = 0.08;
+      const sg = Math.sign(Math.sin(ph)); if (sg !== this.lastSign) { this.lastSign = sg; this.stepTick = true; }
+    }
     else { bob = Math.sin(t * 2.2) * 0.012; armLz = 0.1; armRz = -0.1; }
     if (!moving && !airborne) {
       const k = Math.min(1, this.animT * 3);                                     // ease into every pose
@@ -116,7 +127,7 @@ export class Chibi {
     // tool swing overrides the right arm
     if (this.swingT > 0) {
       this.swingT -= dt;
-      const k = 1 - this.swingT / 0.32;
+      const k = 1 - this.swingT / this.swingLen;
       armRA = k < 0.35 ? -2.8 * (k / 0.35) : -2.8 + 3.4 * ((k - 0.35) / 0.65);
     }
     this.hips.position.y = bob;

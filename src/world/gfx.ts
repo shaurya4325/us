@@ -40,6 +40,23 @@ export function windy(m: THREE.Material, uTime: { value: number }, amount = 0.12
       float sw = sin(uTime * 1.7 + ip.x * 0.6 + ip.z * 0.45) * ${amount.toFixed(3)} * max(position.y, 0.0);
       transformed.x += sw; transformed.z += sw * 0.6;`);
   };
+  m.customProgramCacheKey = () => 'windy' + amount.toFixed(3);   // each sway strength is its own program
+  return m;
+}
+
+/** see-through: anything between the camera and your character dissolves into a soft pixel dither,
+ *  so tree canopies, pillars and roofs never hide you. The engine updates these uniforms every frame. */
+export const SEE = { uP: { value: new THREE.Vector2(-9999, -9999) }, uR: { value: 0 }, uZ: { value: 0 } };
+export function seeThrough<T extends THREE.Material>(m: T): T {
+  const prev = m.onBeforeCompile, key = m.customProgramCacheKey !== THREE.Material.prototype.customProgramCacheKey ? m.customProgramCacheKey.bind(m) : null;
+  m.onBeforeCompile = (sh, r) => {
+    prev?.call(m, sh, r);
+    sh.uniforms.uSeeP = SEE.uP; sh.uniforms.uSeeR = SEE.uR; sh.uniforms.uSeeZ = SEE.uZ;
+    sh.fragmentShader = 'uniform vec2 uSeeP; uniform float uSeeR; uniform float uSeeZ;\n' + sh.fragmentShader.replace('void main() {', `void main() {
+      { float sd = distance(gl_FragCoord.xy, uSeeP) / max(uSeeR, 1.0);
+        if (sd < 1.0 && gl_FragCoord.z < uSeeZ) { float ck = mod(floor(gl_FragCoord.x * 0.5) + floor(gl_FragCoord.y * 0.5), 2.0); if (sd < 0.55 || ck > 0.5) discard; } }`);
+  };
+  m.customProgramCacheKey = () => (key ? key() : '') + '|see';
   return m;
 }
 
@@ -194,28 +211,85 @@ export function labelSprite(text: string, color = '#FF3E8A', scale = 1, heart = 
   return s;
 }
 
-/** the world's water: turquoise with drifting caustic shimmer, one cheap shader */
-export function waterMaterial(uTime: { value: number }, deep = '#2fb8c9', light = '#9ef0ea') {
+/** the world's water: turquoise with drifting caustic shimmer, one cheap shader. strip = a ribbon (streams). */
+export function waterMaterial(uTime: { value: number }, deep = '#2fb8c9', light = '#9ef0ea', strip = false, alpha = 0.9) {
   return new THREE.ShaderMaterial({
-    uniforms: { uTime, cDeep: { value: new THREE.Color(deep) }, cLight: { value: new THREE.Color(light) } }, transparent: true,
+    uniforms: { uTime, cDeep: { value: new THREE.Color(deep) }, cLight: { value: new THREE.Color(light) }, uA: { value: alpha } }, transparent: true, depthWrite: false, side: THREE.DoubleSide,
     vertexShader: 'varying vec2 vP; varying vec2 vU; void main(){ vU = uv; vec4 w = modelMatrix * vec4(position,1.0); vP = w.xz; gl_Position = projectionMatrix * viewMatrix * w; }',
-    fragmentShader: `uniform float uTime; uniform vec3 cDeep; uniform vec3 cLight; varying vec2 vP; varying vec2 vU;
+    fragmentShader: `uniform float uTime; uniform vec3 cDeep; uniform vec3 cLight; uniform float uA; varying vec2 vP; varying vec2 vU;
       void main(){
-        float d = length(vU - 0.5) * 2.0;
+        float d = ${strip ? 'abs(vU.y - 0.5) * 2.0' : 'length(vU - 0.5) * 2.0'};
         float s = sin(vP.x * 2.3 + uTime * 1.3) * sin(vP.y * 2.1 - uTime * 1.1) + sin((vP.x + vP.y) * 3.7 + uTime * 2.0) * 0.5;
-        vec3 c = mix(cLight, cDeep, smoothstep(0.0, 0.9, d) * 0.6 + 0.25);
-        c += smoothstep(0.9, 1.4, s) * 0.35;
-        c = mix(c, vec3(1.0), smoothstep(0.86, 1.0, d) * 0.55);
-        gl_FragColor = vec4(c, 0.9);
+        float s2 = sin(vP.x * 0.9 - uTime * 0.6) * sin(vP.y * 0.8 + uTime * 0.5);
+        vec3 c = mix(cLight, cDeep, smoothstep(0.0, 0.9, d) * 0.6 + 0.25 + s2 * 0.08);
+        c += smoothstep(0.9, 1.4, s) * 0.32;
+        c = mix(c, vec3(1.0), smoothstep(0.84, 1.0, d) * 0.6);
+        gl_FragColor = vec4(c, uA * (1.0 - smoothstep(0.97, 1.0, d) * 0.6));
       }`,
   });
+}
+
+let _petal: THREE.Texture | null = null;
+export function petalTex() {
+  if (_petal) return _petal;
+  const [c, g] = canvas(64, 64);
+  const r = g.createRadialGradient(28, 26, 2, 32, 32, 30);
+  r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.7, 'rgba(255,255,255,0.85)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = r; g.beginPath(); g.ellipse(32, 32, 26, 15, 0.5, 0, Math.PI * 2); g.fill();
+  g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.arc(56, 20, 7, 0, Math.PI * 2); g.fill();
+  return (_petal = new THREE.CanvasTexture(c));
+}
+
+/** GPU-animated drifting particles (sakura petals, fireflies, star motes, sea sparkles): zero CPU per frame.
+ *  mode 0 = falling with wind, 1 = floating, 2 = floating + twinkle */
+export function driftField(n: number, uTime: { value: number }, o: { x: number; z: number; r: number; y0: number; y1: number; colors: number[]; size: number; speed?: number; wind?: number; mode: 0 | 1 | 2; tex?: THREE.Texture; additive?: boolean; spin?: boolean; opacity?: number }) {
+  const seed = new Float32Array(n * 4), col = new Float32Array(n * 3), pos = new Float32Array(n * 3), c = new THREE.Color(), r = rand(Math.abs(n * 7 + Math.round(o.x * 3 + o.z)) + 11);
+  for (let i = 0; i < n; i++) {
+    for (let k = 0; k < 4; k++) seed[i * 4 + k] = r();
+    c.set(o.colors[i % o.colors.length]); col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+    pos[i * 3] = o.x; pos[i * 3 + 1] = o.y0; pos[i * 3 + 2] = o.z;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('seed', new THREE.BufferAttribute(seed, 4)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const m = new THREE.ShaderMaterial({
+    uniforms: { uTime, map: { value: o.tex ?? softDot() }, uC: { value: new THREE.Vector3(o.x, 0, o.z) }, uR: { value: o.r }, uY0: { value: o.y0 }, uY1: { value: o.y1 },
+      uSpeed: { value: o.speed ?? 1 }, uWind: { value: o.wind ?? 0 }, uSize: { value: o.size }, uMode: { value: o.mode }, uSpin: { value: o.spin ? 1 : 0 }, uA: { value: o.opacity ?? 1 } },
+    transparent: true, depthWrite: false, vertexColors: true, blending: o.additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+    vertexShader: `uniform float uTime, uR, uY0, uY1, uSpeed, uWind, uSize, uMode, uSpin; uniform vec3 uC; attribute vec4 seed; varying vec3 vC; varying float vA; varying float vRot;
+      void main(){
+        float t = uTime * uSpeed, H = uY1 - uY0, a = seed.x * 6.2831, rr = sqrt(seed.y) * uR;
+        vec3 p = vec3(uC.x + cos(a) * rr, 0.0, uC.z + sin(a) * rr);
+        vA = 1.0;
+        if (uMode < 0.5) {
+          float y = mod(seed.z * H - t * (0.55 + seed.w * 0.5), H), fall = H - y;
+          p.y = uY0 + y;
+          p.x += sin(t * 1.3 + seed.w * 20.0) * 0.6 + fall * uWind; p.z += cos(t * 1.1 + seed.z * 20.0) * 0.6 + fall * uWind * 0.45;
+          vA = smoothstep(0.0, 0.7, y) * smoothstep(H, H - 1.0, y);
+        } else {
+          p.y = uY0 + seed.z * H + sin(t * 0.8 + seed.w * 30.0) * 0.45;
+          p.x += sin(t * 0.37 + seed.w * 11.0) * 1.3; p.z += cos(t * 0.29 + seed.z * 13.0) * 1.3;
+          if (uMode > 1.5) vA = 0.25 + 0.75 * pow(0.5 + 0.5 * sin(uTime * 2.2 + seed.w * 40.0), 3.0);
+        }
+        vC = color; vRot = uSpin * (t * (1.0 + seed.y * 2.0) + seed.x * 6.28);
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        gl_PointSize = uSize * (0.6 + seed.y * 0.7) * 300.0 / -mv.z;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `uniform sampler2D map; uniform float uA; varying vec3 vC; varying float vA; varying float vRot;
+      void main(){
+        vec2 q = gl_PointCoord - 0.5; float cs = cos(vRot), sn = sin(vRot); q = vec2(cs * q.x - sn * q.y, sn * q.x + cs * q.y) + 0.5;
+        vec4 t = texture2D(map, q); gl_FragColor = vec4(vC, vA * uA) * t; if (gl_FragColor.a < 0.02) discard;
+      }`,
+  });
+  const pts = new THREE.Points(g, m); pts.frustumCulled = false; pts.renderOrder = 4;
+  return pts;
 }
 
 export function disposeTree(o: THREE.Object3D) {
   o.traverse((x: any) => {
     x.geometry?.dispose?.();
     const ms = Array.isArray(x.material) ? x.material : x.material ? [x.material] : [];
-    ms.forEach((m: any) => { for (const k in m) if (m[k]?.isTexture && m[k] !== _matcap && m[k] !== _blob && m[k] !== _soft && m[k] !== _heart) m[k].dispose(); m.dispose(); });
+    ms.forEach((m: any) => { for (const k in m) if (m[k]?.isTexture && ![_matcap, _blob, _soft, _heart, _petal].includes(m[k])) m[k].dispose(); if (m.uniforms) for (const u in m.uniforms) { const v = m.uniforms[u]?.value; if (v?.isTexture && ![_matcap, _blob, _soft, _heart, _petal].includes(v)) v.dispose(); } m.dispose(); });
   });
 }
 

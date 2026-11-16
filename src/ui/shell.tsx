@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { MOODS, moodById, moodPhoto } from '../config/moodPhotos';
 import { PEOPLE, type Who } from '../config/people';
 import { isOnline, useVelvet, type PersonState } from '../lib/velvet';
-import { buzz, isMuted, setMuted, sfx } from '../lib/fx';
+import { buzz, isMuted, setMuted, sfx, musicLevel, setMusicLevel } from '../lib/fx';
+import { MUSIC_CREDIT } from '../audio/BiomeAudioManager';
 import { makeCutout } from '../lib/media';
 import { syncMute } from '../world/sound';
 
@@ -158,6 +159,7 @@ export function Settings({ onClose, onLeave }: { onClose: () => void; onLeave: (
   const { me, states, setMe, toast, status } = useVelvet();
   const [busy, setBusy] = useState('');
   const [mute, setMute] = useState(isMuted());
+  const [vol, setVol] = useState(musicLevel());
   const pick = async (f?: File) => {
     if (!f) return;
     try { setBusy('Starting…'); const c = await makeCutout(f, setBusy); setMe({ cutout: c }); toast('✨ New cutout saved', 'Your partner sees it live'); }
@@ -176,7 +178,12 @@ export function Settings({ onClose, onLeave }: { onClose: () => void; onLeave: (
             <label className="btn ghost center">{busy || 'Upload photo'}<input type="file" accept="image/*" hidden disabled={!!busy} onChange={(e) => pick(e.target.files?.[0])} /></label>
           </div>
         </div>
-        <Tap className="btn ghost" onClick={() => { setMuted(!mute); setMute(!mute); syncMute(); }}>{mute ? '🔇 Sounds off' : '🔊 Sounds on'}</Tap>
+        <Tap className="btn ghost" onClick={() => { setMuted(!mute); setMute(!mute); syncMute(); }}>{mute ? '🔇 Sound effects off' : '🔊 Sound effects on'}</Tap>
+        <label className="row small" style={{ gap: 10 }}>🎵 Music
+          <input type="range" min={0} max={1} step={0.05} value={vol} onChange={(e) => { const v = Number(e.target.value); setVol(v); setMusicLevel(v); syncMute(); }} />
+          <span style={{ width: 34 }}>{Math.round(vol * 100)}%</span>
+        </label>
+        <div className="small muted">{MUSIC_CREDIT}</div>
         <div className="small muted">Sync: {status === 'live' ? '🟢 live (Firebase)' : status === 'demo' ? '🟡 demo (this device only)' : '🔴 blocked by Firestore rules'}</div>
         <Tap className="btn ghost" onClick={onLeave}>Unpair this phone</Tap>
       </motion.div>
