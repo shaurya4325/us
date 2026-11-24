@@ -169,8 +169,10 @@ export class Engine implements EngineAPI {
   held = () => (this.heldId in TOOLS ? (this.heldId as ToolId) : 'none') as ToolId | 'none';
   tier = (t: ToolId) => this.world.tiers?.[t] ?? 0;
   holding = () => !!this.holdingWho;
-  private kd = (e: KeyboardEvent) => { this.keys.add(e.key.toLowerCase()); if (e.key === ' ') this.jump(); if (e.key.toLowerCase() === 'e') this.interact(); };
-  private ku = (e: KeyboardEvent) => this.keys.delete(e.key.toLowerCase());
+  private kd = (e: KeyboardEvent) => {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;   // typing in chat
+    this.keys.add(e.key.toLowerCase()); if (e.key === ' ') this.jump(); if (e.key.toLowerCase() === 'e') this.interact(); };
+  private ku = (e: KeyboardEvent) => { this.keys.delete(e.key.toLowerCase()); };
   private resize = () => {
     const c = this.o.canvas, w = c.clientWidth || innerWidth, h = c.clientHeight || innerHeight;
     this.renderer.setPixelRatio(this.dpr); this.renderer.setSize(w, h, false);
@@ -356,6 +358,15 @@ export class Engine implements EngineAPI {
   play = (a: string, secs: number) => { this.animOverride = a as Anim; this.animUntil = performance.now() + secs * 1000; };
 
   /* ---------- DOM overlays (speech bubbles, +resource popups) ---------- */
+  /** chat: a speech bubble over a character */
+  say(who: Who, text: string) { this.bubble(who, text.length > 90 ? text.slice(0, 88) + '…' : text); }
+  /** voice: a little mic badge over whoever is talking */
+  private speakEl: Partial<Record<Who, HTMLDivElement>> = {};
+  talking(who: Who, on: boolean) {
+    const el = this.speakEl[who];
+    if (on && !el) { const d = document.createElement('div'); d.className = 'speaking'; d.textContent = '🎙️'; this.o.overlay.appendChild(d); this.speakEl[who] = d; }
+    if (!on && el) { el.remove(); delete this.speakEl[who]; }
+  }
   private bubble(who: Who, text: string) {
     const el = document.createElement('div'); el.className = 'bubble'; el.textContent = text;
     this.o.overlay.appendChild(el); this.bubbles.push({ el, who, until: performance.now() + 4200 });
@@ -558,6 +569,11 @@ export class Engine implements EngineAPI {
       b.el.style.opacity = b.who === this.me || sameScene ? '1' : '0';
       return true;
     });
+    for (const w of [this.me, this.partner]) {
+      const el = this.speakEl[w]; if (!el) continue;
+      const pos = w === this.me ? P : this.pPos, [sx, sy] = this.project(pos.x, pos.y + 2.25, pos.z);
+      el.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -100%)`; el.style.opacity = w === this.me || sameScene ? '1' : '0';
+    }
     this.pops = this.pops.filter((p) => {
       p.t += dt; if (p.t > 1.3) { p.el.remove(); return false; }
       const [sx, sy] = this.project(p.x, p.y + p.t * 1.2, p.z);
@@ -655,7 +671,7 @@ export class Engine implements EngineAPI {
     this.cur.dispose(); this.mine.dispose(); this.them.dispose();
     this.pets.forEach((p) => p.mesh.geometry.dispose());
     [this.sparks.points, this.hearts.points, this.tether, this.shadows.mesh].forEach((o: any) => { o.geometry.dispose(); o.material.dispose(); });
-    this.bubbles.forEach((b) => b.el.remove()); this.pops.forEach((p) => p.el.remove());
+    this.bubbles.forEach((b) => b.el.remove()); this.pops.forEach((p) => p.el.remove()); Object.values(this.speakEl).forEach((e) => e?.remove());
     this.parcels.forEach((p) => p.mesh.geometry.dispose());
     this.renderer.dispose(); this.renderer.forceContextLoss();
   }

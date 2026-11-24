@@ -18,6 +18,7 @@ import { Tap, spring } from './shell';
 import { SOLO, setSoloEngine } from '../dev/soloBot';
 import { EmoteButton, Hotbar, Inventory, ToolWheel, loadBar, saveBar, syncBar, Icon } from './InventoryHUD';
 import { Cooking, Keepsakes, Lore, Paint, Quests, StationPanel, applyCraft, recipeLabel } from './Stations';
+import { Comms } from './Comms';
 
 const DEBUG = new URLSearchParams(location.search).has('debug');
 type PanelS = { id: string; data?: any };
@@ -29,6 +30,7 @@ export function World({ openDrawer }: { openDrawer: (id: string) => void }) {
   const worldPath = `${base}/shared/world`;
   const canvas = useRef<HTMLCanvasElement>(null), overlay = useRef<HTMLDivElement>(null), fade = useRef<HTMLDivElement>(null);
   const eng = useRef<Engine | null>(null);
+  const [engS, setEngS] = useState<Engine | null>(null);
   const [hud, setHud] = useState<HudState | null>(null);
   const [panel, setPanel] = useState<PanelS | null>(null);
   const [inv, setInv] = useState(false), [wheel, setWheel] = useState<{ x: number; y: number } | null>(null);
@@ -113,12 +115,12 @@ export function World({ openDrawer }: { openDrawer: (id: string) => void }) {
         onPartnerAct, onHeld: (h) => { const i = barRef.current.indexOf(h); setSel(i); },
         toast, onCouple: (kind, from) => { if (from === me) patch(worldPath, {}, { [`stats.${kind}`]: 1 }); buzz(kind === 'kiss' ? [30, 50, 30] : 'medium'); },
       });
-      eng.current = e;
+      eng.current = e; setEngS(e);
       e.setHeld(barRef.current[0] || 'none');
       if (import.meta.env.DEV) Object.assign(window, { __us: e, __usPatch: (f: any, i: any) => patch(worldPath, f, i) });
       if (SOLO) setSoloEngine(e);
     });
-    return () => { dead = true; if (SOLO) setSoloEngine(null); e?.dispose(); eng.current = null; };
+    return () => { dead = true; if (SOLO) setSoloEngine(null); e?.dispose(); eng.current = null; setEngS(null); };
   }, [base, me]); // eslint-disable-line
   useEffect(() => { eng.current?.setWorld(w); }, [world]); // eslint-disable-line
 
@@ -193,6 +195,7 @@ export function World({ openDrawer }: { openDrawer: (id: string) => void }) {
       <EmoteButton love={love} near={!!hud?.near} holding={!!hud?.holding} partner={partner} onAct={(k) => eng.current?.couple(k, k === 'whisper' ? WHISPERS[Math.floor(Math.random() * WHISPERS.length)] : '')} />
       <Joystick onMove={(x, y) => eng.current?.setJoy(x, y)} />
       <Hotbar bar={bar} sel={sel} w={w} onSelect={choose} onOpen={() => setInv(true)} onWheel={(x, y) => setWheel({ x, y })} />
+      <Comms eng={engS} base={base} me={me} partner={partner} toast={toast} />
       <div className="hud acts">
         <motion.button className="round jumpbtn" whileTap={{ scale: 0.85 }} onPointerDown={() => eng.current?.jump()}>JUMP</motion.button>
         <motion.button className={'round ctxbtn' + (hud?.ctx ? '' : ' off')} whileTap={{ scale: 0.88 }} onPointerDown={() => { eng.current?.interact(); buzz('light'); }}>
