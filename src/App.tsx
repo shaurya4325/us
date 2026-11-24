@@ -4,7 +4,7 @@ import { PEOPLE, type Who } from './config/people';
 import { moodById } from './config/moodPhotos';
 import { getDoc, roomIdFor, setDoc, ROOT, getStatus } from './lib/sync';
 import { VelvetProvider, isOnline, useVelvet, type Session } from './lib/velvet';
-import { MoodRail, Particles, PresenceStage, Settings, Tap, TeaseLayer, Toasts, spring } from './ui/shell';
+import { MoodRail, PresenceStage, Settings, Tap, TeaseLayer, Toasts, spring } from './ui/shell';
 import { Checkup } from './ui/rooms/Checkup';
 import { Arcade } from './ui/rooms/Arcade';
 import { Cuddle } from './ui/rooms/Cuddle';
@@ -14,15 +14,16 @@ import { Gate, Countdown } from './ui/Gate';
 import { Studio, UpdateModal } from './ui/Studio';
 import { music, unlockAudio } from './world/sound';
 import { SOLO, startSoloBot } from './dev/soloBot';
+import { Ico } from './ui/icons';
 
 const World = lazy(() => import('./ui/World').then((m) => ({ default: m.World })));
 
 const DRAWERS = [
-  { id: 'care', icon: '🩺', label: 'Us Checkup & Open Heart', C: Checkup },
-  { id: 'arcade', icon: '🎮', label: 'The Velvet Arcade', C: Arcade },
-  { id: 'cuddle', icon: '🧸', label: 'Cuddle Corner', C: Cuddle },
-  { id: 'sunday', icon: '🕯️', label: 'Sunday Safe Space', C: Sunday },
-  { id: 'capsule', icon: '💍', label: 'Until We Marry', C: Capsule },
+  { id: 'care', icon: '🩺', ico: 'checkup', short: 'Checkup', label: 'Us Checkup & Open Heart', C: Checkup },
+  { id: 'arcade', icon: '🎮', ico: 'arcade', short: 'Arcade', label: 'The Velvet Arcade', C: Arcade },
+  { id: 'cuddle', icon: '🧸', ico: 'cuddle', short: 'Cuddle', label: 'Cuddle Corner', C: Cuddle },
+  { id: 'sunday', icon: '🕯️', ico: 'sunday', short: 'Sunday', label: 'Sunday Safe Space', C: Sunday },
+  { id: 'capsule', icon: '💍', ico: 'capsule', short: 'Someday', label: 'Until We Marry', C: Capsule },
 ];
 const SKEY = 'us:session';
 // The passcode is never stored in the app or the repo. It hashes to our room id; only that room exists in Firestore,
@@ -97,10 +98,10 @@ function Home({ onLeave }: { onLeave: () => void }) {
   const enterWorld = useCallback(() => setPhase(bothRef.current ? 'world' : 'gate'), []);
 
   const D = DRAWERS.find((d) => d.id === drawer);
+  const menu = phase !== 'world';   // the calm opening menu (gate + countdown); the world keeps its blocky HUD
   const pm = moodById(states[partner].mood);
   return (
-    <motion.div className="app" animate={{ rotate: tease?.kind === 'flip' ? 180 : 0 }} transition={{ type: 'spring', stiffness: 120, damping: 14 }}>
-      {phase !== 'world' && <Particles />}
+    <motion.div className={'app' + (menu ? ' menu' : '')} animate={{ rotate: tease?.kind === 'flip' ? 180 : 0 }} transition={{ type: 'spring', stiffness: 120, damping: 14 }}>
       {phase === 'world' ? (
         <Suspense fallback={<div className="gate"><div className="brand" style={{ fontSize: 40 }}>us!!</div></div>}>
           <World openDrawer={setDrawer} />
@@ -108,14 +109,31 @@ function Home({ onLeave }: { onLeave: () => void }) {
       ) : <Gate />}
       {phase === 'countdown' && <Countdown at={startAt} onDone={enterWorld} />}
       {/* partner's mood tints the light */}
-      <div className="tint" style={{ background: `radial-gradient(circle at 80% 20%, ${pm.tint}55, transparent 60%)` }} />
-      <div className="hud dock glass">
-        {DRAWERS.map((d) => <button key={d.id} className={drawer === d.id ? 'on' : ''} title={d.label} onClick={() => setDrawer(drawer === d.id ? null : d.id)}>{d.icon}</button>)}
-        <button title="Settings" onClick={() => setSettings(true)}>⚙︎</button>
-        {me === 'shaurya' && <button title="Creator Update Studio" onClick={() => setStudio(true)}>🛠️</button>}
-      </div>
+      {!menu && <div className="tint" style={{ background: `radial-gradient(circle at 80% 20%, ${pm.tint}55, transparent 60%)` }} />}
+      {menu ? (
+        <nav className="menubar" aria-label="Our spaces">
+          <span className="wordmark">us!!</span>
+          <div className="tabs-pill">
+            {DRAWERS.map((d) => (
+              <button key={d.id} className={'tabp' + (drawer === d.id ? ' on' : '')} title={d.label} aria-pressed={drawer === d.id} onClick={() => setDrawer(drawer === d.id ? null : d.id)}>
+                <Ico name={d.ico} /><span>{d.short}</span>
+              </button>
+            ))}
+          </div>
+          <div className="menubar-end">
+            {me === 'shaurya' && <button className="roundb" title="Creator Update Studio" aria-label="Creator Update Studio" onClick={() => setStudio(true)}><Ico name="studio" /></button>}
+            <button className="roundb" title="Settings" aria-label="Settings" onClick={() => setSettings(true)}><Ico name="settings" /></button>
+          </div>
+        </nav>
+      ) : (
+        <div className="hud dock glass">
+          {DRAWERS.map((d) => <button key={d.id} className={drawer === d.id ? 'on' : ''} title={d.label} onClick={() => setDrawer(drawer === d.id ? null : d.id)}>{d.icon}</button>)}
+          <button title="Settings" onClick={() => setSettings(true)}>⚙︎</button>
+          {me === 'shaurya' && <button title="Creator Update Studio" onClick={() => setStudio(true)}>🛠️</button>}
+        </div>
+      )}
       {status === 'denied' && <div className="hud banner" style={{ left: '50%', transform: 'translateX(-50%)', bottom: 8 }}>Live sync is blocked by Firestore rules — deploy firestore.us.rules.</div>}
-      <PresenceStage />
+      {!menu && <PresenceStage />}
       <MoodRail />
       <AnimatePresence>
         {D && (
@@ -123,7 +141,7 @@ function Home({ onLeave }: { onLeave: () => void }) {
             <motion.div key="bg" className="drawer-bg" onClick={() => setDrawer(null)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
             <motion.div key="dr" className="glass drawer" initial={{ x: '-105%' }} animate={{ x: 0 }} exit={{ x: '-105%' }} transition={spring}>
               <div className="row" style={{ marginBottom: 10 }}>
-                <div className="grow"><div className="small muted">{D.icon} {D.label}</div></div>
+                <div className="grow"><div className="small muted drawer-kicker">{menu ? <Ico name={D.ico} size={16} /> : D.icon} {D.label}</div></div>
                 <Tap className="pill" onClick={() => setDrawer(null)}>✕</Tap>
               </div>
               <D.C />
@@ -168,21 +186,23 @@ function Pairing({ onPaired }: { onPaired: (s: Session) => void }) {
     setBusy(false);
   };
   return (
-    <div className="pair">
-      <Particles />
-      <motion.div className="glass card col" style={{ width: '100%', maxWidth: 420, padding: 22 }} initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={spring}>
-        <div className="brand" style={{ fontSize: 40 }}>us!!</div>
-        <div className="muted">A tiny world for exactly two people.</div>
-        <input className="field" type="password" inputMode="numeric" autoComplete="off" placeholder="Our passcode" value={code} maxLength={8}
-          onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} onKeyDown={(e) => e.key === 'Enter' && who && code.length === 8 && go()} style={{ letterSpacing: '0.35em', fontWeight: 700, textAlign: 'center' }} />
-        <div className="muted small">Who's holding this phone?</div>
-        <div className="grid2">
-          {(['arushi', 'shaurya'] as Who[]).map((w) => <Tap key={w} className={'pill' + (who === w ? ' on' : '')} onClick={() => setWho(w)}>{PEOPLE[w].name}</Tap>)}
+    <main className="pair">
+      <motion.section className="pair-card" initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
+        <h1 className="wordmark big">us!!</h1>
+        <p className="lede">A tiny world for exactly two people.</p>
+        <label className="lbl" htmlFor="pc">Our passcode</label>
+        <input id="pc" className="field pc" type="password" inputMode="numeric" autoComplete="off" placeholder="••••••••" value={code} maxLength={8}
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} onKeyDown={(e) => e.key === 'Enter' && who && code.length === 8 && go()} />
+        <span className="lbl" id="who-l">Who's holding this phone?</span>
+        <div className="seg" role="radiogroup" aria-labelledby="who-l">
+          {(['arushi', 'shaurya'] as Who[]).map((w) => (
+            <button key={w} role="radio" aria-checked={who === w} className={'seg-b' + (who === w ? ' on' : '')} onClick={() => setWho(w)}>{PEOPLE[w].name}</button>
+          ))}
         </div>
-        {err && <div className="banner">{err}</div>}
-        <Tap className="btn" disabled={busy || code.length !== 8 || !who} onClick={go}>{busy ? 'Opening…' : 'Enter us!! 💗'}</Tap>
-        <div className="small muted center">{getStatus() === 'demo' ? 'Demo mode: no Firebase keys, data stays on this device.' : 'Two seats only, one phone each. The world opens when you are both here.'}</div>
-      </motion.div>
-    </div>
+        {err && <div className="err" role="alert">{err}</div>}
+        <button className="cta" disabled={busy || code.length !== 8 || !who} onClick={go}>{busy ? 'Opening…' : 'Enter us!!'}</button>
+        <p className="fine">{getStatus() === 'demo' ? 'Demo mode: no Firebase keys, data stays on this device.' : 'Two seats only, one phone each. The world opens when you are both here.'}</p>
+      </motion.section>
+    </main>
   );
 }

@@ -1,0 +1,134 @@
+/* ================= us!! — the calm opening menu =================
+   The gate, the passcode screen and the countdown, plus the drawers, sheets, toasts and mood rail while they sit
+   on the menu. One blush ground, white surfaces separated by a tone step (no lines, no shadows, no glow), deep plum
+   ink, one rose accent kept for the action and the active tab. Rounded type (Nunito), fully round tabs and buttons.
+   The 3D world keeps its blocky HUD: everything here is scoped to .app.menu, .pair and .countdown. */
+.app.menu, .pair, .countdown {
+  --m-ground: #fbf1f4; --m-surface: #ffffff; --m-step: #f6e6ed; --m-step2: #eed7e1;
+  --m-ink: #3a2330; --m-ink2: #6e5463; --m-accent: #c2416f; --m-accent-soft: #fbe0ea; --m-here: #2f9e6b;
+  --m-font: 'Nunito Variable', 'Nunito', system-ui, sans-serif;
+  --m-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* the drawers read these */
+  --cream: var(--m-ink); --muted: var(--m-ink2); --sans: var(--m-font); --serif: var(--m-font);
+  --edge: 0 0 0 0 transparent; --bevel: 0 0 0 0 transparent; --bevel-in: 0 0 0 0 transparent; --line: transparent;
+  color: var(--m-ink); font-family: var(--m-font); image-rendering: auto; -webkit-font-smoothing: antialiased;
+}
+.app.menu { background: var(--m-ground); }
+.app.menu *, .pair *, .countdown * { text-shadow: none; }
+.app.menu :focus-visible, .pair :focus-visible { outline: 3px solid var(--m-accent); outline-offset: 2px; }
+
+/* wordmark */
+.wordmark { font: 800 22px/1 var(--m-font); letter-spacing: -0.02em; color: var(--m-accent); }
+.wordmark.big { font-size: 44px; margin: 0; }
+
+/* ---------- top bar: wordmark, rounded tabs, settings ---------- */
+.menubar { position: fixed; z-index: 20; top: calc(env(safe-area-inset-top) + 10px); left: calc(env(safe-area-inset-left) + 16px); right: calc(var(--rail) + 16px);
+  display: flex; align-items: center; gap: 14px; }
+.tabs-pill { display: flex; gap: 2px; padding: 4px; background: var(--m-step); border-radius: 999px; min-width: 0; }
+.tabp { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px; border-radius: 999px; color: var(--m-ink2);
+  font: 700 14px var(--m-font); white-space: nowrap; transition: background-color 0.25s var(--m-ease), color 0.25s var(--m-ease), transform 0.15s; }
+.tabp:hover { color: var(--m-ink); }
+.tabp:active { transform: scale(0.96); }
+.tabp.on { background: var(--m-surface); color: var(--m-accent); }
+.menubar-end { margin-left: auto; display: flex; gap: 6px; }
+.roundb { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 999px; background: var(--m-step); color: var(--m-ink2); transition: background-color 0.2s, color 0.2s, transform 0.15s; }
+.roundb:hover { color: var(--m-ink); background: var(--m-step2); }
+.roundb:active { transform: scale(0.94); }
+@media (max-width: 820px) { .tabp:not(.on) span { display: none; } .tabp { padding: 0 12px; } }
+
+/* ---------- the gate ---------- */
+.app.menu .gate { background: none; display: grid; place-items: center; padding: 62px calc(var(--rail) + 16px) 14px 16px; }
+.gate-card { width: min(540px, 100%); background: var(--m-surface); border-radius: 28px; padding: 22px 30px 24px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.gate-card h1 { margin: 4px 0 0; font: 800 22px/1.2 var(--m-font); letter-spacing: -0.01em; color: var(--m-ink); }
+.gate-card p { margin: 0; max-width: 42ch; font: 500 15px/1.5 var(--m-font); color: var(--m-ink2); }
+.pair-row { display: flex; align-items: center; gap: 22px; }
+.person { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 120px; }
+.person .avatar { width: 84px; height: 84px; border-radius: 999px; overflow: hidden; display: grid; place-items: center; background: var(--m-step);
+  box-shadow: 0 0 0 3px var(--m-surface), 0 0 0 6px var(--tint); margin-bottom: 6px; transition: filter 0.6s var(--m-ease); }
+.person .avatar img { width: 100%; height: 100%; object-fit: cover; }
+.person .avatar span { font: 800 30px var(--m-font); color: var(--m-ink2); }
+.person b { font: 800 16px var(--m-font); color: var(--m-ink); }
+.person .state { display: inline-flex; align-items: center; gap: 6px; font: 600 13px var(--m-font); color: var(--m-ink2); }
+.person .state i { width: 8px; height: 8px; border-radius: 999px; background: var(--m-here); }
+.person.away .avatar { box-shadow: 0 0 0 3px var(--m-surface), 0 0 0 6px var(--m-step2); }
+.person.away .avatar img { filter: grayscale(0.9) opacity(0.45); }
+.person.away .state i { background: var(--m-step2); animation: m-breathe 2.4s ease-in-out infinite; }
+.link { color: var(--m-accent); display: grid; place-items: center; animation: m-beat 2.4s ease-in-out infinite; }
+.link span { display: none; }
+@keyframes m-beat { 0%, 100% { transform: scale(1); } 12% { transform: scale(1.14); } 24% { transform: scale(1); } }
+@keyframes m-breathe { 50% { background: var(--m-accent); } }
+
+@media (max-height: 430px) {
+  .app.menu .gate { padding-top: 58px; padding-bottom: 8px; }
+  .gate-card { padding: 14px 26px 16px; gap: 7px; border-radius: 24px; }
+  .person .avatar { width: 68px; height: 68px; margin-bottom: 4px; }
+  .gate-card h1 { font-size: 20px; margin-top: 2px; }
+  .gate-card p { font-size: 14px; }
+  .gate-card .cta { height: 44px; margin-top: 2px; }
+}
+/* the one action */
+.cta { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 26px; margin-top: 4px; border-radius: 999px;
+  background: var(--m-accent); color: #fff; font: 800 16px var(--m-font); transition: transform 0.15s, background-color 0.2s, opacity 0.2s; }
+.cta:hover { background: #ad3962; }
+.cta:active { transform: scale(0.97); }
+.cta:disabled { background: var(--m-step2); color: var(--m-ink2); cursor: default; transform: none; }
+
+/* ---------- the passcode screen ---------- */
+.pair { background: var(--m-ground); padding: 16px; overflow-y: auto; touch-action: pan-y; }
+.pair-card { margin: auto; width: min(400px, 100%); background: var(--m-surface); border-radius: 28px; padding: 22px 26px; display: flex; flex-direction: column; gap: 8px; }
+.pair .lede { margin: 0 0 6px; font: 500 15px/1.5 var(--m-font); color: var(--m-ink2); }
+.pair .lbl { font: 700 13px var(--m-font); color: var(--m-ink2); margin-top: 4px; }
+.pair .field.pc { height: 48px; border: 0; border-radius: 16px; background: var(--m-step); color: var(--m-ink); box-shadow: none; text-align: center;
+  font: 800 20px var(--m-font); letter-spacing: 0.35em; padding: 0 12px; }
+.pair .field.pc::placeholder { color: #b89aab; }
+.pair .field.pc:focus { outline: 3px solid var(--m-accent); outline-offset: 2px; box-shadow: none; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 4px; background: var(--m-step); border-radius: 999px; }
+.seg-b { height: 40px; border-radius: 999px; color: var(--m-ink2); font: 700 15px var(--m-font); transition: background-color 0.25s var(--m-ease), color 0.25s; }
+.seg-b.on { background: var(--m-surface); color: var(--m-accent); }
+.pair .cta { width: 100%; margin-top: 8px; }
+.pair .err { padding: 10px 14px; border-radius: 14px; background: var(--m-accent-soft); color: #8f2a51; font: 600 14px var(--m-font); }
+.pair .fine { margin: 2px 0 0; text-align: center; font: 500 12.5px/1.4 var(--m-font); color: var(--m-ink2); }
+@media (max-height: 420px) { .pair-card { padding: 16px 22px; gap: 6px; } .wordmark.big { font-size: 34px; } .pair .lede { margin-bottom: 0; } }
+
+/* ---------- the countdown ---------- */
+.countdown { background: var(--m-ground); }
+.countdown .part { background: var(--m-step); filter: none; box-shadow: none; }
+.countdown .cd-title { font: 800 22px var(--m-font); color: var(--m-ink); }
+.countdown .n { font: 800 96px/1 var(--m-font); color: var(--m-accent); text-shadow: none; display: grid; place-items: center; min-height: 104px; }
+.countdown .cd-sub { font: 500 15px var(--m-font); color: var(--m-ink2); }
+
+/* ---------- mood rail on the menu ---------- */
+.app.menu .rail { background: var(--m-surface); border-left: 0; box-shadow: none; padding-top: calc(env(safe-area-inset-top) + 14px); gap: 6px; }
+.app.menu .rail .who { font: 700 11px var(--m-font); color: var(--m-ink2); }
+.app.menu .rail hr { border: 0; height: 6px; margin: 0; }
+.app.menu .portrait { border-radius: 18px; box-shadow: 0 0 0 3px var(--m-surface), 0 0 0 5px var(--tint, var(--m-accent)); }
+.app.menu .moodbtn { width: 32px; height: 32px; border-radius: 999px; background: var(--m-step); box-shadow: none; font-size: 16px; transition: background-color 0.2s, transform 0.15s; }
+.app.menu .moodbtn.on { background: var(--m-accent-soft); box-shadow: 0 0 0 2px var(--m-accent); }
+.app.menu .fx { display: none; }
+
+/* ---------- drawers, sheets and toasts on the menu ---------- */
+.app.menu .drawer-bg, .app.menu .sheet-bg { background: rgba(58, 35, 48, 0.32); }
+.app.menu .drawer { background: var(--m-surface); border-radius: 0 28px 28px 0; box-shadow: none; color: var(--m-ink); font-family: var(--m-font); }
+.app.menu .sheet { background: var(--m-surface); border-radius: 28px; box-shadow: none; color: var(--m-ink); }
+.app.menu .drawer h2, .app.menu .drawer h3, .app.menu .sheet h2, .app.menu .sheet h3 { font-family: var(--m-font); font-weight: 800; letter-spacing: -0.01em; color: var(--m-ink); }
+.app.menu .drawer h2, .app.menu .sheet h2 { font-size: 22px; }
+.app.menu .drawer-kicker { display: inline-flex; align-items: center; gap: 6px; font: 700 13px var(--m-font); color: var(--m-ink2); }
+.app.menu .drawer .glass, .app.menu .sheet .glass, .app.menu .drawer .card { background: var(--m-step); border: 0; border-radius: 20px; box-shadow: none; backdrop-filter: none; }
+.app.menu .drawer .btn, .app.menu .sheet .btn { border-radius: 999px; background: var(--m-accent); color: #fff; box-shadow: none; font: 800 15px var(--m-font); }
+.app.menu .drawer .btn.ghost, .app.menu .sheet .btn.ghost, .app.menu .drawer .pill, .app.menu .sheet .pill { border-radius: 999px; background: var(--m-surface); color: var(--m-ink); box-shadow: 0 0 0 1.5px var(--m-step2); font: 700 14px var(--m-font); }
+.app.menu .drawer .glass .pill, .app.menu .drawer .glass .btn.ghost { background: var(--m-surface); }
+.app.menu .drawer .pill.on, .app.menu .sheet .pill.on, .app.menu .drawer .opt.on { background: var(--m-accent-soft); color: var(--m-accent); box-shadow: 0 0 0 2px var(--m-accent); }
+.app.menu .drawer .opt, .app.menu .sheet .opt { border-radius: 18px; background: var(--m-surface); color: var(--m-ink); box-shadow: 0 0 0 1.5px var(--m-step2); font-family: var(--m-font); }
+.app.menu .drawer .field, .app.menu .sheet .field { border: 0; border-radius: 16px; background: var(--m-surface); color: var(--m-ink); box-shadow: 0 0 0 1.5px var(--m-step2); font-family: var(--m-font); }
+.app.menu .drawer .field:focus, .app.menu .sheet .field:focus { box-shadow: 0 0 0 2px var(--m-accent); }
+.app.menu .drawer .tag, .app.menu .sheet .tag { border-radius: 999px; background: var(--m-accent-soft); color: var(--m-accent); box-shadow: none; }
+.app.menu .drawer .banner, .app.menu .sheet .banner { border-radius: 16px; background: var(--m-accent-soft); color: #8f2a51; box-shadow: none; }
+.app.menu .drawer .btn:disabled, .app.menu .drawer .opt:disabled { filter: none; opacity: 0.45; }
+.app.menu .drawer input[type=range], .app.menu .sheet input[type=range] { accent-color: var(--m-accent); }
+.app.menu .toast { background: var(--m-surface); color: var(--m-ink); border-radius: 18px; box-shadow: 0 8px 24px -12px rgba(58, 35, 48, 0.35); font-family: var(--m-font); }
+.app.menu .toast b { color: var(--m-accent); font-family: var(--m-font); }
+.app.menu .toasts { top: calc(env(safe-area-inset-top) + 60px); }
+
+@media (prefers-reduced-motion: reduce) { .link, .person.away .state i { animation: none; } .tabp, .cta, .seg-b { transition: none; } }
+.app.menu .drawer-kicker { display: none; }
+.app.menu .sheet label.row { align-items: center; white-space: nowrap; font: 700 14px var(--m-font); }

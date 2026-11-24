@@ -4,7 +4,8 @@
 import { getStatus, setDoc } from '../lib/sync';
 import type { Who } from '../config/people';
 
-export const SOLO = new URLSearchParams(location.search).has('solo') && getStatus() === 'demo';
+// ?solo in the browser, or the separate "us!! test" APK (built with VITE_SOLO=1)
+export const SOLO = (new URLSearchParams(location.search).has('solo') || import.meta.env.VITE_SOLO === '1') && getStatus() === 'demo';
 
 interface EngineLike { player: { x: number; y: number; z: number }; sceneKind(): string; myAnim(): string; groundAt(x: number, z: number, y: number): number | null; coopHint(): { x: number; z: number } | null; momentForPartner(): { x: number; z: number; yaw: number; anim: string } | null }
 let eng: EngineLike | null = null;

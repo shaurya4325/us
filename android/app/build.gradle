@@ -4,7 +4,7 @@ android {
     namespace "com.shaurya.us"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.shaurya.us"
+        applicationId System.getenv("US_APP_ID") ?: "com.shaurya.us"   // the solo test copy installs as com.shaurya.us.test
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode((System.getenv("US_BUILD") ?: "1") as int)
