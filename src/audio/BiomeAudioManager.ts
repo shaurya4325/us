@@ -15,7 +15,7 @@ export const ZONE_TRACKS: Record<Zone, { file: string; title: string }> = {
 export const MUSIC_CREDIT = 'Music: Kevin MacLeod — incompetech.com (CC BY 4.0) · Sound effects: Kenney & OpenGameArt (CC0)';
 
 const FADE = 2500, BASE = 0.42;
-interface Voice { zone: Zone; el: HTMLAudioElement | null; pad: Pad | null; gain: number; target: number; from: number; t0: number }
+interface Voice { zone: Zone; el: HTMLAudioElement | null; pad: Pad | null; gain: number; target: number; from: number; t0: number; dead?: boolean }
 let voices: Voice[] = [], current: Zone | null = null, muted = false, volume = 1, raf = 0, duckUntil = 0, duckK = 1;
 let ctx: AudioContext | null = null;
 
@@ -33,7 +33,12 @@ function tick() {
     const g = muted ? 0 : v.gain * BASE * volume * duckK;
     if (v.el) v.el.volume = Math.max(0, Math.min(1, g));
     v.pad?.level(g);
-    if (k >= 1 && v.target === 0) { v.el?.pause(); if (v.el) v.el.src = ''; v.pad?.stop(); return false; }
+    if (k >= 1 && v.target === 0) {
+      // mark it dead BEFORE releasing the element: clearing src fires an 'error' that must not start the fallback pad
+      v.dead = true; v.pad?.stop(); v.pad = null;
+      if (v.el) { v.el.pause(); v.el.removeAttribute('src'); v.el.load(); v.el = null; }
+      return false;
+    }
     return true;
   });
   if (busy) raf = requestAnimationFrame(tick);
@@ -50,7 +55,11 @@ export function setZone(z: Zone | null) {
   const v: Voice = { zone: z, el: null, pad: null, gain: 0, target: 1, from: 0, t0: now };
   const el = new Audio(`${import.meta.env.BASE_URL}audio/bgm/${ZONE_TRACKS[z].file}.mp3`);
   el.loop = true; el.volume = 0; el.preload = 'auto';
-  el.addEventListener('error', () => { if (v.el === el) { v.el = null; v.pad = makePad(z); } });
+  // only a real load/decode failure of a track that is still wanted falls back to the procedural pad
+  el.addEventListener('error', () => {
+    if (v.dead || v.el !== el || v.target === 0 || !el.getAttribute('src') || el.error?.code === MediaError.MEDIA_ERR_ABORTED) return;
+    v.el = null; v.pad = makePad(z); kick();
+  });
   v.el = el; voices.push(v);
   if (!muted) el.play().catch(() => { /* waits for the first tap (unlockMusic) */ });
   kick();

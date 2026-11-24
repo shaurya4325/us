@@ -28,6 +28,7 @@ export function describe(e: Ev): [string, string, Sfx, boolean] {
     case 'coupon': return [`🎟️ ${n} prescribed you a coupon`, t, 'shimmer', false];
     case 'redeem': return [`🎟️ ${n} redeemed a coupon`, t, 'shimmer', false];
     case 'rx': return [`🩺 Prescription from Dr. ${n}`, t, 'chime', false];
+    case 'openwhen': return [`💌 ${n} sealed an "Open When…" letter for you`, `Open when ${t}`, 'chime', false];
     case 'zipper': return [`🤐 ${n} hid something inside ${t}`, 'Unzip the heart to find it.', 'shimmer', false];
     case 'checkup': return [`📋 ${n} did their checkup`, t, 'pop', false];
     case 'tease': return [`😈 ${n} is teasing you`, t, 'pop', false];

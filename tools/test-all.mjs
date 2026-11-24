@@ -84,7 +84,7 @@ await shot(A, 'house-10-rooms');
 await A.eval(`__usPatch({}, { 'inv.nectar': 10, 'inv.cotton': 10 })`); await sleep(300);
 for (const [id, data, want] of [['station', 'hearth', 'Hearth'], ['outfit', null, 'Wardrobe'], ['petcare', 'bowls', 'Treat'], ['wish', 'jar', 'Wish Jar'], ['music', null, 'Vinyl'], ['piano', null, 'Music Studio'], ['trophy', null, 'Milestones']]) {
   await A.eval(`__us.ui('${id}', ${JSON.stringify(data)}); 1`); await sleep(500);
-  const h = await A.eval(`document.querySelector('.panel h2')?.textContent || ''`);
+  let h = ''; for (let i = 0; i < 12 && !h.includes(want); i++) { h = await A.eval(`[...document.querySelectorAll('.panel h2')].pop()?.textContent || ''`); if (!h.includes(want)) await sleep(400); }
   check(`Panel "${id}" opens`, h.includes(want), h);
   if (id === 'station') {
     await A.eval(`[...document.querySelectorAll('.recipes .slot')].find(s=>s.title==='Sakura Mochi')?.click(); 1`); await sleep(300);
@@ -101,11 +101,13 @@ for (const [id, data, want] of [['station', 'hearth', 'Hearth'], ['outfit', null
     check('Wish saved', Object.values((await W()).wishes ?? {}).some((x) => x.text === 'a picnic by the pond'));
   }
   if (id === 'trophy') await shot(A, 'trophy');
-  await A.eval(`document.querySelector('.drawer-bg')?.click(); 1`); await sleep(350);
+  await A.eval(`[...document.querySelectorAll('.drawer-bg')].pop()?.click(); 1`); await sleep(350);
 }
 await A.eval(`__us.ui('stars'); 1`); await sleep(2500); await shot(A, 'stargaze');
-await A.eval(`document.querySelector('.night').click(); 1`); await sleep(300); await A.eval(`document.querySelector('.night')?.click(); 1`); await sleep(600);
-check('Stargazing overlay opens and closes', !(await A.eval('!!document.querySelector(".night")')));
+const starsOpen = await A.eval('!!document.querySelector(".night")');
+await A.eval(`document.querySelector('.night').click(); 1`); await sleep(300); await A.eval(`document.querySelector('.night')?.click(); 1`);
+let starsGone = false; for (let i = 0; i < 20 && !starsGone; i++) { await sleep(400); starsGone = !(await A.eval('!!document.querySelector(".night")')); }
+check('Stargazing overlay opens and closes', starsOpen && starsGone);
 await A.eval(`__us.ui('movie'); 1`); await sleep(1500); await shot(A, 'movie');
 await A.eval(`document.querySelector('.movie').click(); 1`); await sleep(3000);
 check('Movie night overlay opens and closes', !(await A.eval('!!document.querySelector(".movie")')));
@@ -150,11 +152,12 @@ for (const s of spots.filter((x) => x.id !== 'exit')) {
 }
 check(`All ${spots.length - 1} interior objects respond`, opened === spots.length - 1 && A.errors.length === errs0, `${opened} responded, ${A.errors.length - errs0} errors`);
 const bed = rooms.find((r) => r.type === 'bedroom'), pool = rooms.find((r) => r.type === 'pool');
-const climb = await A.eval(`(async()=>{ const e=__us; e.player.x=${bed.ox}-1.6; e.player.z=${bed.oz}-3.7; e.player.y=0; e.vy=0; await new Promise(r=>setTimeout(r,100)); e.setJoy(-1,0); await new Promise(r=>setTimeout(r,1400)); e.setJoy(0,0); return e.player.y.toFixed(2) })()`);
+// (movement checks wait for the goal instead of a fixed time: software-rendered test browsers can run at a few fps)
+const climb = await A.eval(`(async()=>{ const e=__us; e.player.x=${bed.ox}-1.6; e.player.z=${bed.oz}-3.7; e.player.y=0; e.vy=0; await new Promise(r=>setTimeout(r,100)); e.setJoy(-1,0); for (let i=0;i<120 && e.player.y<=3;i++) await new Promise(r=>setTimeout(r,250)); e.setJoy(0,0); return e.player.y.toFixed(2) })()`);
 check('Stairs lead to the upper floor', Number(climb) > 3, `y=${climb}`);
-const hall = await A.eval(`(async()=>{ const e=__us; e.player.x=${bed.ox}+3.5; e.player.z=${bed.oz}; e.player.y=0; await new Promise(r=>setTimeout(r,100)); e.setJoy(1,1); await new Promise(r=>setTimeout(r,2200)); e.setJoy(0,0); return [e.player.x.toFixed(1), e.cur.kind].join() })()`);
+const hall = await A.eval(`(async()=>{ const e=__us; e.player.x=${bed.ox}+3.5; e.player.z=${bed.oz}; e.player.y=0; await new Promise(r=>setTimeout(r,100)); e.setJoy(1,1); for (let i=0;i<120 && e.player.x<=${bed.ox}+7.5;i++) await new Promise(r=>setTimeout(r,250)); e.setJoy(0,0); return [e.player.x.toFixed(1), e.cur.kind].join() })()`);
 check('Walk through a hallway into the next room with no fade', Number(hall.split(',')[0]) > bed.ox + 7 && hall.endsWith('inside'), hall);
-const swim = await A.eval(`(async()=>{ const e=__us; e.player.x=${pool.ox}+1; e.player.z=${pool.oz}+0.5; e.player.y=0; await new Promise(r=>setTimeout(r,400)); return e.mine.anim })()`);
+const swim = await A.eval(`(async()=>{ const e=__us; e.player.x=${pool.ox}+1; e.player.z=${pool.oz}+0.5; e.player.y=0; for (let i=0;i<40 && e.mine.anim!=='swim';i++) await new Promise(r=>setTimeout(r,250)); return e.mine.anim })()`);
 check('Walking into the pool swims', swim === 'swim', swim);
 await sleep(300); await shot(A, 'swimming');
 const draws = await A.eval('__us.renderer.info.render.calls');

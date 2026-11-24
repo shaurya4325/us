@@ -9,6 +9,51 @@ import { HoldToRecord, VoicePlay } from './Checkup';
 
 type P = (typeof PLUSHIES)[number];
 type Hidden = { from: string; text?: string; voice?: string; at: number; opened?: boolean };
+type Letter = { from: string; when: string; text: string; at: number; opened?: number };
+const WHENS = ['you miss me', "you can't sleep", 'you need a laugh', 'you feel sad', 'we had a silly fight', "you're proud of yourself", "it's our monthiversary"];
+
+/** "Open When…" sealed envelopes: write one for your partner, they open it only when the moment comes */
+function OpenWhen() {
+  const { me, partner, send, toast } = useVelvet();
+  const [letters, setLetters] = useShared<Record<string, Letter>>('openwhen');
+  const [when, setWhen] = useState(WHENS[0]), [text, setText] = useState(''), [read, setRead] = useState<Letter | null>(null);
+  const all = Object.entries(letters ?? {}).filter(([, l]) => l && l.when).sort((a, b) => b[1].at - a[1].at);
+  const mine = all.filter(([, l]) => l.from !== me), sent = all.filter(([, l]) => l.from === me);
+  const seal = () => { const id = 'o' + Date.now().toString(36); setLetters({ [id]: { from: me, when, text: text.trim(), at: Date.now() } }); send('openwhen', when); sfx('shimmer'); toast('💌 Sealed', `${PEOPLE[partner].name} can open it when ${when}`); setText(''); };
+  return (
+    <>
+      <div className="section-title"><h3>💌 Open When…</h3><span className="small muted">sealed letters</span></div>
+      {mine.length ? (
+        <div className="row wrap">
+          {mine.map(([id, l]) => (
+            <Tap key={id} className={'opt' + (l.opened ? '' : ' on')} onClick={() => { setRead(l); if (!l.opened) setLetters({ [id]: { opened: Date.now() } }); sfx('shimmer'); buzz([20, 30, 20]); }}>
+              <b>{l.opened ? '📖' : '💌'} Open when {l.when}</b>
+            </Tap>
+          ))}
+        </div>
+      ) : <div className="small muted">No letters from {PEOPLE[partner].name} yet.</div>}
+      <div className="glass card col">
+        <b>Write one for {PEOPLE[partner].name}</b>
+        <div className="row wrap">{WHENS.map((w) => <Tap key={w} className={'pill' + (when === w ? ' on' : '')} onClick={() => setWhen(w)}>{w}</Tap>)}</div>
+        <textarea className="field" rows={3} placeholder={`Open when ${when}…`} value={text} maxLength={600} onChange={(e) => setText(e.target.value)} />
+        <Tap className="btn" disabled={!text.trim()} onClick={seal}>Seal it 💌</Tap>
+        {!!sent.length && <div className="small muted">You sealed {sent.length}: {sent.map(([, l]) => `${l.opened ? '📖' : '💌'} ${l.when}`).join(' · ')}</div>}
+      </div>
+      <AnimatePresence>
+        {read && (
+          <div className="sheet-bg" style={{ alignItems: 'center', justifyContent: 'center' }} onClick={() => setRead(null)}>
+            <motion.div className="glass card col center" style={{ width: '84%' }} onClick={(e) => e.stopPropagation()} initial={{ scaleY: 0 }} animate={{ scaleY: 1 }} transition={spring}>
+              <div style={{ fontSize: 34 }}>💌</div>
+              <div className="small muted">Open when {read.when} · from {PEOPLE[read.from as 'arushi']?.name}</div>
+              <h3 style={{ whiteSpace: 'pre-wrap' }}>{read.text}</h3>
+              <Tap className="btn ghost" onClick={() => setRead(null)}>Fold it back 💗</Tap>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
 
 /** original SVG plushies: bunny ears for Kuro/Mochi (Kuro wears a little jester cap), round ears for Coco */
 export function PlushieArt({ p, size = 150 }: { p: P; size?: number }) {
@@ -75,6 +120,8 @@ export function Cuddle() {
       <h2>Cuddle Corner</h2>
       <div className="small muted">Poke to squish. Hold to squeeze — {PEOPLE[partner].name} feels it.</div>
       <div className="grid2">{PLUSHIES.map((p) => <Plushie key={p.id} p={p} hidden={zip?.[p.id]} onTuck={() => setTuck(p)} onZip={() => { setOpen(p); setZip({ [p.id]: { opened: true } }); sfx('shimmer'); buzz([20, 30, 20, 30, 20]); }} />)}</div>
+
+      <OpenWhen />
 
       <div className="section-title"><h3>Our Mini Room</h3><span className="small muted">live lighting</span></div>
       <motion.div className="glass" style={{ height: 190, position: 'relative', overflow: 'hidden' }}

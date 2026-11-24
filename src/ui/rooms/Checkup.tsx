@@ -25,12 +25,12 @@ const Toggle = ({ on, label, set }: { on: boolean; label: string; set: (v: boole
 export function Checkup() {
   const { me, partner, send, toast, setMe, events, states } = useVelvet();
   const [energy, setEnergy] = useState(states[me].energy ?? 60);
-  const [v, setV] = useState({ water: false, food: false, sleep: false, headache: false });
+  const [v, setV] = useState({ water: false, food: false, sleep: false, headache: false, cramps: false });
   const [needs, setNeeds] = useState<string[]>([]);
   const P = PEOPLE[partner].name;
 
   const submit = () => {
-    const bits = [`⚡ ${energy}%`, v.water && '💧 water', v.food && '🍱 ate', v.sleep && '😴 slept well', v.headache && '🤕 headache'].filter(Boolean).join(' · ');
+    const bits = [`⚡ ${energy}%`, v.water && '💧 water', v.food && '🍱 ate', v.sleep && '😴 slept well', v.headache && '🤕 headache', v.cramps && '🌡️ cramps'].filter(Boolean).join(' · ');
     setMe({ energy });
     send('checkup', bits + (needs.length ? ` · needs: ${needs.join(', ')}` : ''), { energy, ...v, needs });
     sfx('shimmer'); toast('📋 Checkup sent', `${P} sees it now`);
@@ -48,6 +48,7 @@ export function Checkup() {
           <Toggle on={v.food} label="🍱 Ate" set={(x) => setV({ ...v, food: x })} />
           <Toggle on={v.sleep} label="😴 Slept" set={(x) => setV({ ...v, sleep: x })} />
           <Toggle on={v.headache} label="🤕 Headache" set={(x) => setV({ ...v, headache: x })} />
+          <Toggle on={v.cramps} label="🌡️ Cramps" set={(x) => setV({ ...v, cramps: x })} />
         </div>
         <b>What I need from you right now</b>
         <div className="row wrap">{NEEDS.map((n) => <Toggle key={n} on={needs.includes(n)} label={n} set={(x) => setNeeds(x ? [...needs, n] : needs.filter((y) => y !== n))} />)}</div>

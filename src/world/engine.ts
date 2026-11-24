@@ -441,7 +441,8 @@ export class Engine implements EngineAPI {
     const spd = mo ? 0 : Math.hypot(this.vel.x, this.vel.y);
     if (spd > 0.3) this.yaw = angLerp(this.yaw, Math.atan2(this.vel.x, this.vel.y), 1 - Math.exp(-12 * dt));
     // splash when stepping into water
-    if (wading !== this.wasWater) { if (wading) { sound('splash', { vol: 0.6 }); this.fx('splash', P.x, P.y + 0.2, P.z, 10); } this.wasWater = wading; }
+    const inWater = wading || swimming;   // the lagoon/streams and the indoor pool both splash as you step in
+    if (inWater !== this.wasWater) { if (inWater) { sound('splash', { vol: swimming ? 0.8 : 0.6 }); this.fx('splash', P.x, P.y + 0.2, P.z, swimming ? 16 : 10); } this.wasWater = inWater; }
     // my chibi
     const over = this.animOverride && now < this.animUntil ? this.animOverride : null;
     if (over && spd > 0.8 && over !== 'hands') this.animOverride = null;
